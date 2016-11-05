@@ -42,6 +42,9 @@ public class App extends Application {
                 spEditor.putLong("MaxFileSize", PublicDate.defaultFileSize);
                 spEditor.putBoolean("AudioOn", true);
                 spEditor.putBoolean("PowerSaving", true);
+                spEditor.putBoolean("PathRecOn", true);
+                spEditor.putBoolean("AutoStopOn", true);
+                spEditor.putInt("AutoStopInterval", PublicDate.defaultInterval);
                 spEditor.commit();
             }
         }

@@ -2,7 +2,6 @@ package cn.edu.scu.carrecorder.util;
 
 import android.content.Context;
 import android.hardware.Camera;
-import android.util.Log;
 
 import java.util.List;
 

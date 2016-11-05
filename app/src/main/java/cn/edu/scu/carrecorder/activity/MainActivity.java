@@ -7,9 +7,7 @@ import android.app.FragmentTransaction;
 import android.content.ContentResolver;
 import android.content.Context;
 import android.content.Intent;
-import android.content.SharedPreferences;
 import android.database.Cursor;
-import android.media.CamcorderProfile;
 import android.net.Uri;
 import android.os.Bundle;
 import android.provider.ContactsContract;
@@ -21,13 +19,7 @@ import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.Toolbar;
 import android.view.Menu;
 import android.view.MenuItem;
-import android.view.MotionEvent;
 import android.view.ViewGroup;
-
-import com.google.android.gms.appindexing.Action;
-import com.google.android.gms.appindexing.AppIndex;
-import com.google.android.gms.appindexing.Thing;
-import com.google.android.gms.common.api.GoogleApiClient;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -44,11 +36,10 @@ import cn.edu.scu.carrecorder.R;
 import cn.edu.scu.carrecorder.classes.Contactor;
 import cn.edu.scu.carrecorder.fragment.ContactFragment;
 import cn.edu.scu.carrecorder.fragment.FileFragment;
-import cn.edu.scu.carrecorder.fragment.MonitorFragment;
+import cn.edu.scu.carrecorder.fragment.PathFragment;
 import cn.edu.scu.carrecorder.fragment.RecordFragment;
 import cn.edu.scu.carrecorder.fragment.SettingFragment;
 import cn.edu.scu.carrecorder.util.PublicDate;
-import cn.edu.scu.carrecorder.util.VideoSize;
 import cn.pedant.SweetAlert.SweetAlertDialog;
 
 public class MainActivity extends AppCompatActivity
@@ -62,9 +53,6 @@ public class MainActivity extends AppCompatActivity
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
-        int screenWidth = getWindowManager().getDefaultDisplay().getWidth();
-        int screenHeight = getWindowManager().getDefaultDisplay().getHeight();
-        VideoSize.getOptimalSize(screenWidth, screenHeight);
         toolbar = (Toolbar) findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
 
@@ -77,13 +65,13 @@ public class MainActivity extends AppCompatActivity
 
         NavigationView navigationView = (NavigationView) findViewById(R.id.nav_view);
         navigationView.setNavigationItemSelectedListener(this);
-        navigationView.setCheckedItem(R.id.nav_record);
+        navigationView.setCheckedItem(R.id.nav_path);
 
         FragmentManager fragmentManager = getFragmentManager();
         FragmentTransaction transaction = fragmentManager.beginTransaction();
 
-        Fragment homeFragment = RecordFragment.getFragment();
-        transaction.add(R.id.content, homeFragment, "Record");
+        Fragment homeFragment = PathFragment.getFragment();
+        transaction.add(R.id.content, homeFragment, "Path");
         currFrag = homeFragment;
         transaction.commit();
 
@@ -165,12 +153,37 @@ public class MainActivity extends AppCompatActivity
                 dialog1.setCanceledOnTouchOutside(false);
                 dialog1.show();
                 break;
+            case R.id.clearPath:
+                SweetAlertDialog dialog2 = new SweetAlertDialog(this, SweetAlertDialog.WARNING_TYPE)
+                        .setTitleText("确定清空？")
+                        .setContentText("记录清空后无法恢复")
+                        .setConfirmText("确定")
+                        .setCancelText("取消")
+                        .setCancelClickListener(null)
+                        .setConfirmClickListener(new SweetAlertDialog.OnSweetClickListener() {
+                            @Override
+                            public void onClick(SweetAlertDialog sDialog) {
+                                deleteAllPath();
+                                sDialog.setTitleText("清空成功")
+                                        .setConfirmClickListener(null)
+                                        .changeAlertType(SweetAlertDialog.SUCCESS_TYPE);
+                            }
+                        });
+                dialog2.setCanceledOnTouchOutside(false);
+                dialog2.show();
+                break;
             case R.id.add_contactor:
                 startActivityForResult(new Intent(
                         Intent.ACTION_PICK, ContactsContract.Contacts.CONTENT_URI), 0);
                 break;
         }
         return true;
+    }
+
+    private void deleteAllPath() {
+        PublicDate.paths.clear();
+        PathFragment.getFragment().saveWheelPath(PublicDate.paths);
+        PathFragment.getFragment().onResume();
     }
 
     @Override
@@ -282,6 +295,8 @@ public class MainActivity extends AppCompatActivity
             getMenuInflater().inflate(R.menu.file, menu);
         } else if (currFrag instanceof ContactFragment) {
             getMenuInflater().inflate(R.menu.contact, menu);
+        } else if (currFrag instanceof PathFragment) {
+            getMenuInflater().inflate(R.menu.path, menu);
         }
         return true;
     }
@@ -308,7 +323,16 @@ public class MainActivity extends AppCompatActivity
             } else {
                 fragment.onResume();
             }
-        } else if (id == R.id.nav_friends) {
+        } else if (id == R.id.nav_path) {
+            fragment = fragmentManager.findFragmentByTag("Path");
+            if (fragment == null) {
+                fragment = PathFragment.getFragment();
+                transaction = transaction.add(R.id.content, fragment, "Path");
+            } else {
+                fragment.onResume();
+            }
+        }
+        else if (id == R.id.nav_friends) {
             fragment = fragmentManager.findFragmentByTag("Contacts");
             if (fragment == null) {
                 fragment = ContactFragment.getFragment();

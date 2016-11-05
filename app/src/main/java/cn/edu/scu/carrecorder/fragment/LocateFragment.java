@@ -1,6 +1,8 @@
 package cn.edu.scu.carrecorder.fragment;
 
 import android.app.Fragment;
+import android.content.Context;
+import android.content.SharedPreferences;
 import android.graphics.Color;
 import android.os.Bundle;
 import android.support.annotation.Nullable;
@@ -8,8 +10,6 @@ import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.TextView;
-import android.widget.Toast;
 
 import com.amap.api.location.AMapLocation;
 import com.amap.api.location.AMapLocationClient;
@@ -32,7 +32,18 @@ import com.amap.api.services.geocoder.RegeocodeAddress;
 import com.amap.api.services.geocoder.RegeocodeQuery;
 import com.amap.api.services.geocoder.RegeocodeResult;
 
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.ObjectOutputStream;
+import java.text.SimpleDateFormat;
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.List;
+
 import cn.edu.scu.carrecorder.R;
+import cn.edu.scu.carrecorder.classes.WheelPath;
+import cn.edu.scu.carrecorder.util.PublicDate;
 
 public class LocateFragment extends Fragment implements LocationSource,
         AMapLocationListener{
@@ -44,7 +55,6 @@ public class LocateFragment extends Fragment implements LocationSource,
     private UiSettings mUiSettings;  //控制ui
     private MapView mapView;
     private AMap aMap;
-    private boolean isFirst;
     private LatLng oldLatLng;
     //声明AMapLocationClient类对象
     //声明AMapLocationClient类对象
@@ -52,12 +62,44 @@ public class LocateFragment extends Fragment implements LocationSource,
     //声明定位回调监听器
     private OnLocationChangedListener mListener;
     public AMapLocationClientOption mLocationOption = null;
+    private int locateCount = 0;
+    private int stopCount = 0;
+    private WheelPath path = new WheelPath(null, new ArrayList<cn.edu.scu.carrecorder.classes.LatLonPoint>());
 
-    public void setPathRecOn(boolean pathRecOn) {
-        this.pathRecOn = pathRecOn;
+    public void setLineDrawingOn(boolean lineDrawingOn) {
+        if (lineDrawingOn) {
+            SimpleDateFormat sdf = new SimpleDateFormat("yyyy_MM_dd_HH_mm_ss");
+            Date date = new Date();
+            path.setName("Path_" + sdf.format(date));
+        } else {
+            PublicDate.paths.add(path);
+            saveWheelPath(PublicDate.paths);
+            path.clear();
+        }
+        this.lineDrawingOn = lineDrawingOn;
     }
-
     private boolean pathRecOn = false;
+    private boolean lineDrawingOn = false;
+    private boolean powerSavingOn = false;
+    private boolean autoStopOn = false;
+    private int autoStopInterval = 0;
+
+    private void saveWheelPath(List<WheelPath> paths) {
+        try {
+            FileOutputStream fos = getActivity().openFileOutput("WheelPath", Context.MODE_PRIVATE);
+            ObjectOutputStream oos = new ObjectOutputStream(fos);
+            for (WheelPath path: paths) {
+                oos.writeObject(path);
+            }
+            oos.writeObject(null);
+            oos.close();
+            fos.close();
+        } catch (FileNotFoundException e) {
+            e.printStackTrace();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
 
     @Nullable
     @Override
@@ -65,7 +107,11 @@ public class LocateFragment extends Fragment implements LocationSource,
         view = inflater.inflate(R.layout.locate_frag, null);
         mapView = (MapView) view.findViewById(R.id.mapView);
         mapView.onCreate(savedInstanceState);// 必须要写
-        isFirst = true;
+        SharedPreferences sp = getActivity().getSharedPreferences("AppConfig", Context.MODE_PRIVATE);
+        pathRecOn = sp.getBoolean("PathRecOn", true);
+        powerSavingOn = sp.getBoolean("PowerSaving", true);
+        autoStopOn = sp.getBoolean("AutoStopOn", true);
+        autoStopInterval = sp.getInt("AutoStopInterval", PublicDate.defaultInterval);
         init();
         return  view;
     }
@@ -85,23 +131,48 @@ public class LocateFragment extends Fragment implements LocationSource,
         if (mListener != null && amapLocation != null) {
             if (amapLocation != null
                     && amapLocation.getErrorCode() == 0) {
+                locateCount ++;
                 mListener.onLocationChanged(amapLocation);// 显示系统小蓝点
                 LatLng newLatLng = new LatLng(amapLocation.getLatitude(), amapLocation.getLongitude());
-                if(isFirst){
-                    //记录第一次的定位信息
-                    oldLatLng = newLatLng;
-                    isFirst = false;
+                if(locateCount <= 2){
+                    return;
                 }
                 //位置有变化
-                if(oldLatLng != newLatLng){
+                if(! oldLatLng.equals(newLatLng)){
                     float distance = AMapUtils.calculateLineDistance(oldLatLng, newLatLng);
-                    if (distance >= 165) {
-                        return;
+
+                    if (powerSavingOn ) {
+                        if (distance >= 165) {
+                            return;
+                        } else if (distance <= 30) {
+                            stopCount += 5;
+                        } else {
+                            stopCount = 0;
+                        }
+                    } else {
+                        if (distance >= 65) {
+                            return;
+                        } else if (distance <= 10) {
+                            stopCount ++;
+                        } else {
+                            stopCount = 0;
+                        }
                     }
+
+                    if (autoStopOn && lineDrawingOn && stopCount >= (autoStopInterval / 1000)) {
+                        RecordFragment.getFragment().stopRecording();
+                        stopCount = 0;
+                    }
+
                     Log.e("Amap", amapLocation.getLatitude() + "," + amapLocation.getLongitude());
-                    if (pathRecOn) {
+                    if (lineDrawingOn) {
                         drawLine(oldLatLng ,newLatLng );
+                        if (pathRecOn) {
+                            path.addLatLonPoint(new cn.edu.scu.carrecorder.classes.LatLonPoint(
+                                    amapLocation.getLatitude(), amapLocation.getLongitude()));
+                        }
                     }
+
                     oldLatLng = newLatLng;
                     float speed = amapLocation.getSpeed();
                     getPosSpeInfo(amapLocation, speed);
@@ -110,9 +181,6 @@ public class LocateFragment extends Fragment implements LocationSource,
             } else {
                 String errText = "定位失败," + amapLocation.getErrorCode()+ ": " + amapLocation.getErrorInfo();
                 Log.e("AmapErr",errText);
-                if(isFirst){
-                    Toast.makeText(getActivity(), errText, Toast.LENGTH_SHORT).show();
-                }
             }
         }
     }
@@ -153,7 +221,7 @@ public class LocateFragment extends Fragment implements LocationSource,
             mLocationClient.setLocationListener(this);
             //设置为高精度定位模式
             mLocationOption.setLocationMode(AMapLocationClientOption.AMapLocationMode.Hight_Accuracy);
-            mLocationOption.setInterval(5000);
+            mLocationOption.setInterval(2000);
             //设置定位参数
             mLocationClient.setLocationOption(mLocationOption);
             // 此方法为每隔固定时间会发起一次定位请求，为了减少电量消耗或网络流量消耗，
@@ -164,9 +232,9 @@ public class LocateFragment extends Fragment implements LocationSource,
         }
     }
 
-    public void changeLocatRate() {
+    public void changeLocatRate(int interval) {
         mLocationClient.stopLocation();
-        mLocationOption.setInterval(10000);
+        mLocationOption.setInterval(interval);
         mLocationClient.setLocationOption(mLocationOption);
         mLocationClient.startLocation();
     }

@@ -10,6 +10,14 @@
             android:id="@+id/nav_file"
             android:icon="@drawable/files"
             android:title="视频文件" />
+
+        <item
+            android:id="@+id/nav_path"
+            android:icon="@drawable/path"
+            android:title="行车轨迹">
+
+        </item>
+
         <item
             android:id="@+id/nav_friends"
             android:icon="@drawable/friends"

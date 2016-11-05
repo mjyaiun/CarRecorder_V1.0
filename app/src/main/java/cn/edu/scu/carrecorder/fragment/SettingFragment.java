@@ -51,12 +51,27 @@ public class SettingFragment extends Fragment {
     @InjectView(R.id.img_button_audio_on_layout)
     RelativeLayout layoutImgBtnAudioOn;
 
+    @InjectView(R.id.toggle_button_pathrecon)
+    ToggleButton togBtnPathRecOn;
+    @InjectView(R.id.img_button_pathrecon_layout)
+    RelativeLayout layoutImgBtnPathRecOn;
+
+    @InjectView(R.id.toggle_button_autostop)
+    ToggleButton togBtnAutoStopOn;
+    @InjectView(R.id.img_button_autostop_layout)
+    RelativeLayout layoutImgBtnAutoStopOn;
+
     @InjectView(R.id.quality_selector)
     GroupButtonView radioBtnQuality;
     @InjectView(R.id.duration_selector)
     GroupButtonView radioBtnDuration;
     @InjectView(R.id.filesize_selector)
     GroupButtonView radioBtnFilesize;
+    @InjectView(R.id.stoptime_selector)
+    GroupButtonView radioBtnStopTime;
+
+    @InjectView(R.id.layout_stoptime)
+    LinearLayout layoutStopTime;
 
     @InjectView(R.id.layout_clear)
     LinearLayout clearAll;
@@ -78,14 +93,18 @@ public class SettingFragment extends Fragment {
         int quality = sp.getInt("Quality", PublicDate.defaultQuality);
         int maxDuration = sp.getInt("MaxDuration", PublicDate.defaultDuration);
         long maxFileSize = sp.getLong("MaxFileSize", PublicDate.defaultFileSize);
+        int stoptime = sp.getInt("AutoStopInterval", PublicDate.defaultInterval);
         radioBtnQuality.checkChild(1 - quality);
         radioBtnDuration.checkChild(maxDuration / 10 / 60 / 1000 - 1);
         radioBtnFilesize.checkChild((int) ((maxFileSize / 256 / 1024 / 1024) - 1));
+        radioBtnStopTime.checkChild(stoptime / 60 / 1000 / 5 - 1);
     }
 
     private void initSwitches(SharedPreferences sp) {
         boolean audioOn = sp.getBoolean("AudioOn", true);
         boolean powerSaving = sp.getBoolean("PowerSaving", true);
+        boolean pathRecOn = sp.getBoolean("PathRecOn", true);
+        boolean autoStopOn = sp.getBoolean("AutoStopOn", true);
 
         togBtnAudioOn.setChecked(audioOn);
         RelativeLayout.LayoutParams params = (RelativeLayout.LayoutParams) layoutImgBtnAudioOn
@@ -117,6 +136,40 @@ public class SettingFragment extends Fragment {
             layoutImgBtnPowerSaving.setLayoutParams(params3);
             togBtnPowerSaving.setGravity(Gravity.RIGHT | Gravity.CENTER_VERTICAL);
         }
+
+        togBtnPathRecOn.setChecked(pathRecOn);
+        params = (RelativeLayout.LayoutParams) layoutImgBtnPathRecOn
+                .getLayoutParams();
+
+        if(pathRecOn) {
+            params.addRule(RelativeLayout.ALIGN_LEFT, -1);
+            params.addRule(RelativeLayout.ALIGN_RIGHT, R.id.toggle_button_pathrecon_layout1);
+            layoutImgBtnPathRecOn.setLayoutParams(params);
+            togBtnPathRecOn.setGravity(Gravity.LEFT | Gravity.CENTER_VERTICAL);
+        } else {
+            params.addRule(RelativeLayout.ALIGN_RIGHT, -1);
+            params.addRule(RelativeLayout.ALIGN_LEFT,R.id.toggle_button_pathrecon_layout1);
+            layoutImgBtnPathRecOn.setLayoutParams(params);
+            togBtnPathRecOn.setGravity(Gravity.RIGHT | Gravity.CENTER_VERTICAL);
+        }
+
+        togBtnAutoStopOn.setChecked(autoStopOn);
+        params = (RelativeLayout.LayoutParams) layoutImgBtnAutoStopOn
+                .getLayoutParams();
+
+        if(autoStopOn) {
+            params.addRule(RelativeLayout.ALIGN_LEFT, -1);
+            params.addRule(RelativeLayout.ALIGN_RIGHT, R.id.toggle_button_autostop_layout1);
+            layoutImgBtnAutoStopOn.setLayoutParams(params);
+            togBtnAutoStopOn.setGravity(Gravity.LEFT | Gravity.CENTER_VERTICAL);
+            layoutStopTime.setVisibility(View.VISIBLE);
+        } else {
+            params.addRule(RelativeLayout.ALIGN_RIGHT, -1);
+            params.addRule(RelativeLayout.ALIGN_LEFT,R.id.toggle_button_autostop_layout1);
+            layoutImgBtnAutoStopOn.setLayoutParams(params);
+            togBtnAutoStopOn.setGravity(Gravity.RIGHT | Gravity.CENTER_VERTICAL);
+            layoutStopTime.setVisibility(View.GONE);
+        }
     }
 
     private void setListener() {
@@ -147,6 +200,16 @@ public class SettingFragment extends Fragment {
                 SharedPreferences sp = getActivity().getSharedPreferences("AppConfig", Context.MODE_PRIVATE);
                 SharedPreferences.Editor editor = sp.edit();
                 editor.putInt("Quality", Integer.parseInt(code));
+                editor.commit();
+            }
+        });
+
+        radioBtnStopTime.setOnGroupBtnClickListener(new GroupButtonView.OnGroupBtnClickListener() {
+            @Override
+            public void groupBtnClick(String code) {
+                SharedPreferences sp = getActivity().getSharedPreferences("AppConfig", Context.MODE_PRIVATE);
+                SharedPreferences.Editor editor = sp.edit();
+                editor.putInt("AutoStopInterval", Integer.parseInt(code)* 60 * 1000);
                 editor.commit();
             }
         });
@@ -184,6 +247,90 @@ public class SettingFragment extends Fragment {
                 }
             }
         });
+
+        View.OnClickListener clickToToggleListenerAutoStopOn = new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                togBtnAutoStopOn.toggle();
+            }
+        };
+
+        layoutImgBtnAutoStopOn.setOnClickListener(clickToToggleListenerAutoStopOn);
+
+        togBtnAutoStopOn.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
+            @Override
+            public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
+                SharedPreferences sp = getActivity().getSharedPreferences("AppConfig", Context.MODE_PRIVATE);
+                SharedPreferences.Editor editor = sp.edit();
+                editor.putBoolean("AutoStopOn", isChecked);
+                editor.commit();
+
+                RelativeLayout.LayoutParams params = (RelativeLayout.LayoutParams) layoutImgBtnAutoStopOn
+                        .getLayoutParams();
+                if(isChecked) {
+                    TranslateAnimation animation = new TranslateAnimation(DisplayUtils.dip2px(getActivity(), -40), 0, 0, 0);
+                    animation.setDuration(200);
+                    layoutImgBtnAutoStopOn.startAnimation(animation);
+                    params.addRule(RelativeLayout.ALIGN_LEFT, -1);
+                    params.addRule(RelativeLayout.ALIGN_RIGHT,R.id.toggle_button_autostop_layout1);
+                    layoutImgBtnAutoStopOn.setLayoutParams(params);
+                    togBtnAutoStopOn.setGravity(Gravity.LEFT | Gravity.CENTER_VERTICAL);
+                    layoutStopTime.setVisibility(View.VISIBLE);
+                } else {
+                    TranslateAnimation animation = new TranslateAnimation(DisplayUtils.dip2px(getActivity(), 40), 0, 0, 0);
+                    animation.setDuration(200);
+                    layoutImgBtnAutoStopOn.startAnimation(animation);
+                    params.addRule(RelativeLayout.ALIGN_RIGHT, -1);
+                    params.addRule(RelativeLayout.ALIGN_LEFT,R.id.toggle_button_autostop_layout1);
+                    layoutImgBtnAutoStopOn.setLayoutParams(params);
+                    togBtnAutoStopOn.setGravity(Gravity.RIGHT | Gravity.CENTER_VERTICAL);
+                    layoutStopTime.setVisibility(View.GONE);
+                }
+
+            }
+        });
+
+        View.OnClickListener clickToToggleListenerPathRecOn = new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                togBtnPathRecOn.toggle();
+            }
+        };
+
+        layoutImgBtnPathRecOn.setOnClickListener(clickToToggleListenerPathRecOn);
+
+        togBtnPathRecOn.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
+            @Override
+            public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
+                SharedPreferences sp = getActivity().getSharedPreferences("AppConfig", Context.MODE_PRIVATE);
+                SharedPreferences.Editor editor = sp.edit();
+                editor.putBoolean("PathRecOn", isChecked);
+                editor.commit();
+
+                RelativeLayout.LayoutParams params = (RelativeLayout.LayoutParams) layoutImgBtnPathRecOn
+                        .getLayoutParams();
+                if(isChecked) {
+                    TranslateAnimation animation = new TranslateAnimation(DisplayUtils.dip2px(getActivity(), -40), 0, 0, 0);
+                    animation.setDuration(200);
+                    layoutImgBtnPathRecOn.startAnimation(animation);
+                    params.addRule(RelativeLayout.ALIGN_LEFT, -1);
+                    params.addRule(RelativeLayout.ALIGN_RIGHT,R.id.toggle_button_pathrecon_layout1);
+                    layoutImgBtnPathRecOn.setLayoutParams(params);
+                    togBtnPathRecOn.setGravity(Gravity.LEFT | Gravity.CENTER_VERTICAL);
+
+                } else {
+                    TranslateAnimation animation = new TranslateAnimation(DisplayUtils.dip2px(getActivity(), 40), 0, 0, 0);
+                    animation.setDuration(200);
+                    layoutImgBtnPathRecOn.startAnimation(animation);
+                    params.addRule(RelativeLayout.ALIGN_RIGHT, -1);
+                    params.addRule(RelativeLayout.ALIGN_LEFT,R.id.toggle_button_pathrecon_layout1);
+                    layoutImgBtnPathRecOn.setLayoutParams(params);
+                    togBtnPathRecOn.setGravity(Gravity.RIGHT | Gravity.CENTER_VERTICAL);
+                }
+
+            }
+        });
+
         View.OnClickListener clickToToggleListenerAudioOn = new View.OnClickListener() {
             @Override
             public void onClick(View v) {

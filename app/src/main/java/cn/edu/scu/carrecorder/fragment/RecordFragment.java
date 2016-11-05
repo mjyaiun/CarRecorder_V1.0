@@ -86,6 +86,7 @@ public class RecordFragment extends Fragment implements Callback{
     private LocateFragment locateFragment;
     private long countUp;
     boolean powerSavingOn = false;
+    int powerSavingCount = 0;
 
     private static RecordFragment homeFragment = new RecordFragment();
 
@@ -102,6 +103,8 @@ public class RecordFragment extends Fragment implements Callback{
             @Override
             public boolean onTouch(View v, MotionEvent event) {
                 if (powerSavingOn) {
+                    powerSavingCount = 0;
+                    locateFragment.changeLocatRate(2000);
                     WindowManager.LayoutParams lp = getActivity().getWindow().getAttributes();
                     lp.screenBrightness = 1.0f;
                     getActivity().getWindow().setAttributes(lp);
@@ -113,7 +116,6 @@ public class RecordFragment extends Fragment implements Callback{
         ButterKnife.inject(this, view);
         loadMapFrag();
         initialize();
-        //getSpeed();
         return view;
     }
 
@@ -354,14 +356,14 @@ public class RecordFragment extends Fragment implements Callback{
         });
 
         recording = true;
-        locateFragment.setPathRecOn(true);
+        locateFragment.setLineDrawingOn(true);
     }
 
-    private void stopRecording() {
+    public void stopRecording() {
         mediaRecorder.stop(); // stop the recording
         releaseMediaRecorder(); // release the MediaRecorder object
         recording = false;
-        locateFragment.setPathRecOn(false);
+        locateFragment.setLineDrawingOn(false);
     }
 
     private void releaseMediaRecorder() {
@@ -436,9 +438,11 @@ public class RecordFragment extends Fragment implements Callback{
         //设置视频录制质量
         CamcorderProfile profile = CamcorderProfile.get(quality);
         mediaRecorder.setVideoSize(profile.videoFrameWidth, profile.videoFrameHeight);
+
         //设置视频最长时长和最大文件大小
         mediaRecorder.setMaxDuration(maxDuration);
-        mediaRecorder.setMaxFileSize(maxFileSize);
+        //mediaRecorder.setMaxFileSize(maxFileSize);
+
         mediaRecorder.setOutputFile(filepath);
         mediaRecorder.setOnInfoListener(infoListener);
 
@@ -511,13 +515,13 @@ public class RecordFragment extends Fragment implements Callback{
             @Override
             public void onChronometerTick(Chronometer arg0) {
                 countUp = (SystemClock.elapsedRealtime() - startTime) / 1000;
-
+                powerSavingCount ++;
                 if (countUp % 2 == 0) {
                     chronoRecordingImage.setVisibility(View.VISIBLE);
                 } else {
                     chronoRecordingImage.setVisibility(View.INVISIBLE);
                 }
-                if(countUp == 30 && powerSavingOn ) {
+                if(powerSavingCount == 30 && powerSavingOn ) {
                     openPowerSavingMode();
                 }
                 String asText = String.format("%02d", countUp / 60) + ":" + String.format("%02d", countUp % 60);
@@ -528,7 +532,7 @@ public class RecordFragment extends Fragment implements Callback{
     }
 
     private void openPowerSavingMode() {
-        locateFragment.changeLocatRate();
+        locateFragment.changeLocatRate(5000);
         //降低屏幕亮度
         WindowManager.LayoutParams lp = getActivity().getWindow().getAttributes();
         lp.screenBrightness = 0.2f;
