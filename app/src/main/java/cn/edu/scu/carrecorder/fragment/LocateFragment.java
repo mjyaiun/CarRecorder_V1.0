@@ -17,11 +17,13 @@ import com.amap.api.location.AMapLocationClientOption;
 import com.amap.api.location.AMapLocationListener;
 import com.amap.api.maps2d.AMap;
 import com.amap.api.maps2d.AMapUtils;
+import com.amap.api.maps2d.CameraUpdate;
 import com.amap.api.maps2d.CameraUpdateFactory;
 import com.amap.api.maps2d.LocationSource;
 import com.amap.api.maps2d.MapView;
 import com.amap.api.maps2d.UiSettings;
 import com.amap.api.maps2d.model.BitmapDescriptorFactory;
+import com.amap.api.maps2d.model.CameraPosition;
 import com.amap.api.maps2d.model.LatLng;
 import com.amap.api.maps2d.model.MyLocationStyle;
 import com.amap.api.maps2d.model.PolylineOptions;
@@ -42,6 +44,7 @@ import java.util.Date;
 import java.util.List;
 
 import cn.edu.scu.carrecorder.R;
+import cn.edu.scu.carrecorder.classes.CLatLonPoint;
 import cn.edu.scu.carrecorder.classes.WheelPath;
 import cn.edu.scu.carrecorder.util.PublicDate;
 
@@ -64,25 +67,34 @@ public class LocateFragment extends Fragment implements LocationSource,
     public AMapLocationClientOption mLocationOption = null;
     private int locateCount = 0;
     private int stopCount = 0;
-    private WheelPath path = new WheelPath(null, new ArrayList<cn.edu.scu.carrecorder.classes.LatLonPoint>());
+    private WheelPath path = new WheelPath(null, new ArrayList<CLatLonPoint>());
 
     public void setLineDrawingOn(boolean lineDrawingOn) {
         if (lineDrawingOn) {
             SimpleDateFormat sdf = new SimpleDateFormat("yyyy_MM_dd_HH_mm_ss");
             Date date = new Date();
             path.setName("Path_" + sdf.format(date));
+            stopCount = 0;
         } else {
             PublicDate.paths.add(path);
             saveWheelPath(PublicDate.paths);
             path.clear();
+            aMap.clear();
         }
         this.lineDrawingOn = lineDrawingOn;
     }
     private boolean pathRecOn = false;
     private boolean lineDrawingOn = false;
-    private boolean powerSavingOn = false;
+
+    public void setRateReduced(boolean rateReduced) {
+        this.rateReduced = rateReduced;
+    }
+
+    private boolean rateReduced = false;
     private boolean autoStopOn = false;
     private int autoStopInterval = 0;
+
+
 
     private void saveWheelPath(List<WheelPath> paths) {
         try {
@@ -109,7 +121,6 @@ public class LocateFragment extends Fragment implements LocationSource,
         mapView.onCreate(savedInstanceState);// 必须要写
         SharedPreferences sp = getActivity().getSharedPreferences("AppConfig", Context.MODE_PRIVATE);
         pathRecOn = sp.getBoolean("PathRecOn", true);
-        powerSavingOn = sp.getBoolean("PowerSaving", true);
         autoStopOn = sp.getBoolean("AutoStopOn", true);
         autoStopInterval = sp.getInt("AutoStopInterval", PublicDate.defaultInterval);
         init();
@@ -134,14 +145,24 @@ public class LocateFragment extends Fragment implements LocationSource,
                 locateCount ++;
                 mListener.onLocationChanged(amapLocation);// 显示系统小蓝点
                 LatLng newLatLng = new LatLng(amapLocation.getLatitude(), amapLocation.getLongitude());
+
                 if(locateCount <= 2){
                     return;
                 }
-                //位置有变化
-                if(! oldLatLng.equals(newLatLng)){
-                    float distance = AMapUtils.calculateLineDistance(oldLatLng, newLatLng);
 
-                    if (powerSavingOn ) {
+                float distance = AMapUtils.calculateLineDistance(oldLatLng, newLatLng);
+                //位置没有变化
+                if(newLatLng.equals(oldLatLng)){
+                    if (rateReduced) {
+                        stopCount += 5;
+                    } else {
+                        stopCount += 2;
+                    }
+                } else {    //位置有变化
+                    CameraUpdate newPos = CameraUpdateFactory.newCameraPosition(new CameraPosition(newLatLng, 20, 30, 0));
+                    aMap.animateCamera(newPos);
+
+                    /*if (rateReduced) {
                         if (distance >= 165) {
                             return;
                         } else if (distance <= 30) {
@@ -153,22 +174,17 @@ public class LocateFragment extends Fragment implements LocationSource,
                         if (distance >= 65) {
                             return;
                         } else if (distance <= 10) {
-                            stopCount ++;
+                            stopCount += 2;
                         } else {
                             stopCount = 0;
                         }
-                    }
-
-                    if (autoStopOn && lineDrawingOn && stopCount >= (autoStopInterval / 1000)) {
-                        RecordFragment.getFragment().stopRecording();
-                        stopCount = 0;
-                    }
+                    }*/
 
                     Log.e("Amap", amapLocation.getLatitude() + "," + amapLocation.getLongitude());
                     if (lineDrawingOn) {
                         drawLine(oldLatLng ,newLatLng );
                         if (pathRecOn) {
-                            path.addLatLonPoint(new cn.edu.scu.carrecorder.classes.LatLonPoint(
+                            path.addLatLonPoint(new CLatLonPoint(
                                     amapLocation.getLatitude(), amapLocation.getLongitude()));
                         }
                     }
@@ -176,6 +192,11 @@ public class LocateFragment extends Fragment implements LocationSource,
                     oldLatLng = newLatLng;
                     float speed = amapLocation.getSpeed();
                     getPosSpeInfo(amapLocation, speed);
+                }
+
+                if (autoStopOn && lineDrawingOn && stopCount >= (autoStopInterval / 1000)) {
+                    RecordFragment.getFragment().stopRecording();
+                    stopCount = 0;
                 }
 
             } else {
@@ -277,11 +298,10 @@ public class LocateFragment extends Fragment implements LocationSource,
 
     /**绘制两个坐标点之间的线段,从以前位置到现在位置*/
     private void drawLine(LatLng oldData,LatLng newData ) {
-
         // 绘制一个大地曲线
         aMap.addPolyline((new PolylineOptions())
                 .add(oldData, newData)
-                .geodesic(true).color(Color.GREEN));
+                .geodesic(true).color(Color.BLUE));
 
     }
 
@@ -298,7 +318,7 @@ public class LocateFragment extends Fragment implements LocationSource,
         aMap.getUiSettings().setScaleControlsEnabled(false);
         aMap.setMyLocationStyle(myLocationStyle);
         aMap.setLocationSource(this);// 设置定位监听
-        mUiSettings.setMyLocationButtonEnabled(true);// 设置默认定位按钮是否显示
+        mUiSettings.setMyLocationButtonEnabled(false);// 设置默认定位按钮是否显示
         aMap.setMyLocationEnabled(true);// 设置为true表示显示定位层并可触发定位，false表示隐藏定位层并不可触发定位，默认是false
         aMap.moveCamera(CameraUpdateFactory.zoomTo(20));
     }

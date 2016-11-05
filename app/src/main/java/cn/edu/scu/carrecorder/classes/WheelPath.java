@@ -9,14 +9,14 @@ import java.util.ArrayList;
 
 public class WheelPath implements Serializable{
     String name;
-    ArrayList<LatLonPoint> points;
+    ArrayList<CLatLonPoint> points;
 
-    public WheelPath(String name, ArrayList<LatLonPoint> points) {
+    public WheelPath(String name, ArrayList<CLatLonPoint> points) {
         this.name = name;
         this.points = points;
     }
 
-    public void addLatLonPoint(LatLonPoint newPoint) {
+    public void addLatLonPoint(CLatLonPoint newPoint) {
         points.add(newPoint);
     }
 
@@ -32,7 +32,7 @@ public class WheelPath implements Serializable{
         points.clear();
     }
 
-    public ArrayList<LatLonPoint>  getPoint() {
+    public ArrayList<CLatLonPoint>  getPoint() {
         return points;
     }
 }

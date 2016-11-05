@@ -17,7 +17,7 @@ public class PublicDate {
     public static int defaultDuration = 10*60*1000;   //默认视频录制的最长时长10min
     public static long defaultFileSize = 256*1024*1024;        //默认视频录制的最大文件长度256MB
     public static int defaultQuality = CamcorderProfile.QUALITY_HIGH;   //默认视频质量
-    public static int defaultInterval = 5*60*1000;
+    public static int defaultInterval = 5*60*1000;    //停车最大间隔5min
     public static List<Contactor> contactors;
     public static List<WheelPath> paths = new ArrayList<>();
 

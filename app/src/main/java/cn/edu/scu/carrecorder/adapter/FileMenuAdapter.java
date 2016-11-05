@@ -85,7 +85,16 @@ public class FileMenuAdapter extends SwipeMenuAdapter<FileMenuAdapter.DefaultVie
 
         public void setData(String title, int duration) {
             this.tvTitle.setText(title);
-            this.tvDuration.setText("时长：" + duration + "秒");
+
+            String text = "时长:";
+            if (duration / 60 / 60 != 0) {
+                text += duration / 60 / 60 + "时" + duration / 60 + "分";
+            }
+            if(duration / 60 != 0) {
+                text += duration / 60 + "分";
+            }
+            text += duration % 60 + "秒";
+            this.tvDuration.setText(text);
         }
 
         @Override

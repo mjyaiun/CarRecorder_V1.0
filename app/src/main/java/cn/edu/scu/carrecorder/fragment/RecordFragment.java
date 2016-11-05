@@ -86,6 +86,7 @@ public class RecordFragment extends Fragment implements Callback{
     private LocateFragment locateFragment;
     private long countUp;
     boolean powerSavingOn = false;
+    boolean screenLightDecreased = false;
     int powerSavingCount = 0;
 
     private static RecordFragment homeFragment = new RecordFragment();
@@ -98,20 +99,6 @@ public class RecordFragment extends Fragment implements Callback{
     public View onCreateView(LayoutInflater inflater, ViewGroup container,
                              Bundle savedInstanceState) {
         View view = inflater.inflate(R.layout.fragment_record, container, false);
-        RelativeLayout rl = (RelativeLayout) view.findViewById(R.id.root);
-        rl.setOnTouchListener(new View.OnTouchListener() {
-            @Override
-            public boolean onTouch(View v, MotionEvent event) {
-                if (powerSavingOn) {
-                    powerSavingCount = 0;
-                    locateFragment.changeLocatRate(2000);
-                    WindowManager.LayoutParams lp = getActivity().getWindow().getAttributes();
-                    lp.screenBrightness = 1.0f;
-                    getActivity().getWindow().setAttributes(lp);
-                }
-                return false;
-            }
-        });
         myContext = getActivity();
         ButterKnife.inject(this, view);
         loadMapFrag();
@@ -150,7 +137,7 @@ public class RecordFragment extends Fragment implements Callback{
 
     private int findBackFacingCamera() {
         int cameraId = -1;
-        // Search for the back facing camera
+        // Search for the back_arr facing camera
         // get the number of cameras
         int numberOfCameras = Camera.getNumberOfCameras();
         // for every camera check
@@ -172,11 +159,6 @@ public class RecordFragment extends Fragment implements Callback{
 
         if(recording) {
             stopRecording();
-            stopChronometer();
-            capture.setImageResource(R.drawable.player_record);
-            buttonFlash.setVisibility(View.VISIBLE);
-            switchCamera.setVisibility(View.VISIBLE);
-            Toast.makeText(myContext, "视频已保存！", Toast.LENGTH_LONG).show();
         }
     }
 
@@ -233,6 +215,9 @@ public class RecordFragment extends Fragment implements Callback{
             @Override
             public boolean onTouch(View v, MotionEvent event) {
                 if (event.getAction() == MotionEvent.ACTION_DOWN) {
+                    if (powerSavingOn) {
+                        closePowerSavingMode();
+                    }
                     try {
                         focusOnTouch(event);
                     } catch(Exception e){
@@ -269,7 +254,7 @@ public class RecordFragment extends Fragment implements Callback{
                 int camerasNumber = Camera.getNumberOfCameras();
                 if (camerasNumber > 1) {
                     // release the old camera instance
-                    // switch camera, from the front and the back and vice versa
+                    // switch camera, from the front and the back_arr and vice versa
 
                     releaseCamera();
                     chooseCamera();
@@ -314,15 +299,10 @@ public class RecordFragment extends Fragment implements Callback{
         @Override
         public void onClick(View v) {
             if (recording) {
-                stopChronometer();
-                capture.setImageResource(R.drawable.player_record);
 
                 // stop recording and release camera
                 stopRecording();
 
-                buttonFlash.setVisibility(View.VISIBLE);
-                switchCamera.setVisibility(View.VISIBLE);
-                Toast.makeText(myContext, "视频已保存！", Toast.LENGTH_LONG).show();
             } else {
                 startRecording(null);
             }
@@ -364,6 +344,11 @@ public class RecordFragment extends Fragment implements Callback{
         releaseMediaRecorder(); // release the MediaRecorder object
         recording = false;
         locateFragment.setLineDrawingOn(false);
+        stopChronometer();
+        capture.setImageResource(R.drawable.player_record);
+        buttonFlash.setVisibility(View.VISIBLE);
+        switchCamera.setVisibility(View.VISIBLE);
+        Toast.makeText(myContext, "视频已保存！", Toast.LENGTH_LONG).show();
     }
 
     private void releaseMediaRecorder() {
@@ -531,12 +516,26 @@ public class RecordFragment extends Fragment implements Callback{
         chrono.start();
     }
 
+    public void closePowerSavingMode() {
+        if (screenLightDecreased) {
+            powerSavingCount = 0;
+            locateFragment.changeLocatRate(2000);
+            WindowManager.LayoutParams lp = getActivity().getWindow().getAttributes();
+            lp.screenBrightness = 1.0f;
+            getActivity().getWindow().setAttributes(lp);
+            screenLightDecreased = false;
+            locateFragment.setRateReduced(false);
+        }
+    }
+
     private void openPowerSavingMode() {
         locateFragment.changeLocatRate(5000);
         //降低屏幕亮度
         WindowManager.LayoutParams lp = getActivity().getWindow().getAttributes();
         lp.screenBrightness = 0.2f;
         getActivity().getWindow().setAttributes(lp);
+        screenLightDecreased = true;
+        locateFragment.setRateReduced(true);
     }
 
 

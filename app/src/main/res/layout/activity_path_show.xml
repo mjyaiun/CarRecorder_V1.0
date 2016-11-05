@@ -18,7 +18,7 @@
             android:layout_height="wrap_content"
             android:background="@color/toolbar_blue"
             app:popupTheme="@style/AppTheme.PopupOverlay"
-            app:navigationIcon="@drawable/back"
+            app:navigationIcon="@drawable/back_arr"
             >
 
             <TextView
@@ -33,12 +33,13 @@
         </android.support.v7.widget.Toolbar>
     </android.support.design.widget.AppBarLayout>
 
-    <com.amap.api.maps2d.MapView
+    <com.amap.api.maps.MapView
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:layout_alignParentBottom="true"
         android:layout_alignParentStart="true"
+        android:id="@+id/mapview_path"
         android:layout_below="@+id/view_path">
-    </com.amap.api.maps2d.MapView>
+    </com.amap.api.maps.MapView>
 
 </android.support.design.widget.CoordinatorLayout>

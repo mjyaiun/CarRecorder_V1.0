@@ -37,4 +37,5 @@ dependencies {
     compile project(':vitamio')
     compile files('libs/AMap2DMap_2.9.1_AMapSearch_3.4.0_AMapLocation_3.0.0_20160923.jar')
     compile 'com.google.android.gms:play-services-appindexing:8.4.0'
+    compile files('libs/Android_Map3D_SDK_V4.1.2_20161104.jar')
 }

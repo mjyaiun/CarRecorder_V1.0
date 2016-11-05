@@ -3,12 +3,8 @@ package cn.edu.scu.carrecorder.fragment;
 import android.app.Fragment;
 import android.content.Context;
 import android.content.Intent;
-import android.media.MediaMetadataRetriever;
-import android.net.Uri;
 import android.os.Bundle;
-import android.os.Environment;
 import android.support.v7.app.ActionBarDrawerToggle;
-import android.support.v7.view.ContextThemeWrapper;
 import android.support.v7.widget.DefaultItemAnimator;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.Toolbar;
@@ -24,19 +20,16 @@ import com.yanzhenjie.recyclerview.swipe.SwipeMenuCreator;
 import com.yanzhenjie.recyclerview.swipe.SwipeMenuItem;
 import com.yanzhenjie.recyclerview.swipe.SwipeMenuRecyclerView;
 
-import java.io.EOFException;
-import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
-import java.io.FilenameFilter;
 import java.io.IOException;
-import java.io.InvalidClassException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.io.StreamCorruptedException;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
-import java.util.Collections;
+import java.util.Date;
 import java.util.List;
 import java.util.Random;
 
@@ -45,10 +38,8 @@ import butterknife.InjectView;
 import cn.edu.scu.carrecorder.R;
 import cn.edu.scu.carrecorder.activity.MainActivity;
 import cn.edu.scu.carrecorder.activity.PathShowActivity;
-import cn.edu.scu.carrecorder.activity.RecordPlayActivity;
-import cn.edu.scu.carrecorder.adapter.FileMenuAdapter;
 import cn.edu.scu.carrecorder.adapter.PathMenuAdapter;
-import cn.edu.scu.carrecorder.classes.LatLonPoint;
+import cn.edu.scu.carrecorder.classes.CLatLonPoint;
 import cn.edu.scu.carrecorder.classes.WheelPath;
 import cn.edu.scu.carrecorder.customview.ListViewDecoration;
 import cn.edu.scu.carrecorder.listener.OnItemClickListener;
@@ -79,7 +70,7 @@ public class PathFragment extends Fragment {
                              Bundle savedInstanceState) {
         View view = inflater.inflate(R.layout.fragment_path, container, false);
         ButterKnife.inject(this, view);
-        testPath();
+        //testPath();
         return view;
     }
 
@@ -91,20 +82,19 @@ public class PathFragment extends Fragment {
         initList();
     }
 
-    private void testPath() {
+    /*private void testPath() {
         List<WheelPath> paths = new ArrayList<>();
 
-        Random rd = new Random();
         for (int i=0;i < 5;i ++) {
-            ArrayList<LatLonPoint> points = new ArrayList<>();
+            ArrayList<CLatLonPoint> points = new ArrayList<>();
             for (int j=0;j < 5; j ++) {
-                points.add(new LatLonPoint(rd.nextDouble(),rd.nextDouble()));
+                points.add(new CLatLonPoint(103.999942 + i*0.1 + j*0.01, 30.557785+i*0.1+j*0.01));
             }
-            paths.add(new WheelPath("Test" + i, points));
+            paths.add(new WheelPath(new SimpleDateFormat("yyyy-MM-dd_HH_mm_ss").format(new Date()), points));
         }
 
         saveWheelPath(paths);
-    }
+    }*/
 
     public void saveWheelPath(List<WheelPath> paths) {
         try {
@@ -231,6 +221,7 @@ public class PathFragment extends Fragment {
         public void onItemClick(int position) {
             Intent intent = new Intent(getActivity(), PathShowActivity.class);
             intent.putExtra("PathName",paths.get(position).getName());
+            intent.putParcelableArrayListExtra("Points", paths.get(position).getPoint());
             startActivity(intent);
         }
     };
