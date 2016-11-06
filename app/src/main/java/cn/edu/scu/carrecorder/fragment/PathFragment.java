@@ -3,7 +3,11 @@ package cn.edu.scu.carrecorder.fragment;
 import android.app.Fragment;
 import android.content.Context;
 import android.content.Intent;
+import android.content.SharedPreferences;
+import android.graphics.Color;
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.Message;
 import android.support.v7.app.ActionBarDrawerToggle;
 import android.support.v7.widget.DefaultItemAnimator;
 import android.support.v7.widget.LinearLayoutManager;
@@ -55,10 +59,13 @@ public class PathFragment extends Fragment {
     @InjectView(R.id.tips_path)
     TextView tips;
 
-    List<WheelPath> paths = PublicDate.paths;
     List<String> names;
     PathMenuAdapter mPathMenuAdapter;
-
+    Handler handler;
+    private static final int PATH_LOADED = 70;
+    Runnable getPathThread;
+    private static final int PATH_LOAD_START = 284;
+    View view;
     private static PathFragment pathFragment = new PathFragment();
 
     public static PathFragment getFragment() {
@@ -66,19 +73,68 @@ public class PathFragment extends Fragment {
     }
 
     @Override
+    public void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        setRetainInstance(true);
+    }
+
+    @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container,
                              Bundle savedInstanceState) {
-        View view = inflater.inflate(R.layout.fragment_path, container, false);
-        ButterKnife.inject(this, view);
-        //testPath();
+        if (view == null) {
+            view = inflater.inflate(R.layout.fragment_path, container, false);
+            ButterKnife.inject(this, view);
+        }
+        initToolbar();
+
+        handler = new Handler() {
+            @Override
+            public void handleMessage(Message msg) {
+                switch (msg.what) {
+                    case PATH_LOADED:
+                        initList();
+                        new Handler().postDelayed(new Runnable() {
+                            @Override
+                            public void run() {
+                                SharedPreferences sp = getActivity().getSharedPreferences("AppConfig", Context.MODE_PRIVATE);
+                                boolean pathRecOn = sp.getBoolean("PathRecOn", false);
+                                if (! pathRecOn) {
+                                    SweetAlertDialog dialog = new SweetAlertDialog(getActivity(), SweetAlertDialog.NORMAL_TYPE);
+                                    dialog.setConfirmText("确定");
+                                    dialog.setTitleText("轨迹记录功能未打开");
+                                    dialog.setContentText("轨迹记录功能未打开，当前无法记录轨迹");
+                                    dialog.setConfirmClickListener(null);
+                                    dialog.show();
+                                }
+                            }
+                        }, 100);
+                        break;
+                    case PATH_LOAD_START:
+                        break;
+                }
+            }
+        };
+        getPathThread = new Runnable() {
+            @Override
+            public void run() {
+                try {
+                    Thread.sleep(300);
+                    handler.sendEmptyMessage(PATH_LOAD_START);
+                    loadPaths();
+                    Thread.sleep(200);
+                    handler.sendEmptyMessage(PATH_LOADED);
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+            }
+        };
+        new Thread(getPathThread).start();
         return view;
     }
 
     @Override
     public void onResume() {
         super.onResume();
-        initToolbar();
-        loadPaths();
         initList();
     }
 
@@ -88,7 +144,7 @@ public class PathFragment extends Fragment {
         for (int i=0;i < 5;i ++) {
             ArrayList<CLatLonPoint> points = new ArrayList<>();
             for (int j=0;j < 5; j ++) {
-                points.add(new CLatLonPoint(103.999942 + i*0.1 + j*0.01, 30.557785+i*0.1+j*0.01));
+                points.add(new CLatLonPoint(30.557785+i*0.1+j*0.01, 103.999942 + i*0.1 + j*0.01));
             }
             paths.add(new WheelPath(new SimpleDateFormat("yyyy-MM-dd_HH_mm_ss").format(new Date()), points));
         }
@@ -126,6 +182,13 @@ public class PathFragment extends Fragment {
         }
     };
     private void initList() {
+
+        if (PublicDate.paths.size() == 0) {
+            tips.setVisibility(View.VISIBLE);
+        } else {
+            tips.setVisibility(View.GONE);
+        }
+
         pathlist.setSwipeMenuCreator(smc);
         pathlist.setLayoutManager(new LinearLayoutManager(getActivity()));// 布局管理器。
         pathlist.setHasFixedSize(true);// 如果Item够简单，高度是确定的，打开FixSize将提高性能。
@@ -141,7 +204,7 @@ public class PathFragment extends Fragment {
     }
 
     private void loadPaths() {
-        paths.clear();
+        PublicDate.paths.clear();
         FileInputStream fis;
         ObjectInputStream ois = null;
         try {
@@ -149,13 +212,8 @@ public class PathFragment extends Fragment {
             ois = new ObjectInputStream(fis);
             WheelPath temp = (WheelPath) ois.readObject();
             while (temp != null) {
-                paths.add(temp);
+                PublicDate.paths.add(temp);
                 temp = (WheelPath) ois.readObject();
-            }
-            if (paths.size() == 0) {
-                tips.setVisibility(View.VISIBLE);
-            } else {
-                tips.setVisibility(View.GONE);
             }
         } catch (FileNotFoundException e) {
             e.printStackTrace();
@@ -170,7 +228,7 @@ public class PathFragment extends Fragment {
 
     private List<String> getNames() {
         ArrayList<String> names = new ArrayList<>();
-        for (WheelPath path: paths) {
+        for (WheelPath path: PublicDate.paths) {
             names.add(path.getName());
         }
         return names;
@@ -194,12 +252,17 @@ public class PathFragment extends Fragment {
                                 @Override
                                 public void onClick(SweetAlertDialog sDialog) {
                                     sDialog.setTitleText("删除成功")
-                                            .setContentText(paths.get(itemPos).getName() + "已删除")
+                                            .setContentText(PublicDate.paths.get(itemPos).getName() + "已删除")
                                             .setConfirmClickListener(null)
                                             .changeAlertType(SweetAlertDialog.SUCCESS_TYPE);
                                     names.remove(itemPos);
-                                    paths.remove(itemPos);
-                                    saveWheelPath(paths);
+                                    PublicDate.paths.remove(itemPos);
+                                    new Thread(new Runnable() {
+                                        @Override
+                                        public void run() {
+                                            saveWheelPath(PublicDate.paths);
+                                        }
+                                    }).start();
 
                                     mPathMenuAdapter.notifyItemRemoved(itemPos);
                                     if(mPathMenuAdapter.getItemCount() == 0) {
@@ -220,8 +283,8 @@ public class PathFragment extends Fragment {
         @Override
         public void onItemClick(int position) {
             Intent intent = new Intent(getActivity(), PathShowActivity.class);
-            intent.putExtra("PathName",paths.get(position).getName());
-            intent.putParcelableArrayListExtra("Points", paths.get(position).getPoint());
+            intent.putExtra("PathName",PublicDate.paths.get(position).getName());
+            intent.putParcelableArrayListExtra("Points", PublicDate.paths.get(position).getPoint());
             startActivity(intent);
         }
     };

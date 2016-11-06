@@ -7,9 +7,12 @@ import android.app.FragmentTransaction;
 import android.content.ContentResolver;
 import android.content.Context;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.database.Cursor;
 import android.net.Uri;
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.PersistableBundle;
 import android.provider.ContactsContract;
 import android.support.design.widget.NavigationView;
 import android.support.v4.view.GravityCompat;
@@ -55,7 +58,6 @@ public class MainActivity extends AppCompatActivity
         setContentView(R.layout.activity_main);
         toolbar = (Toolbar) findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
-
         drawer = (DrawerLayout) findViewById(R.id.drawer_layout);
         PublicDate.drawer = drawer;
         ActionBarDrawerToggle toggle = new ActionBarDrawerToggle(
@@ -65,29 +67,62 @@ public class MainActivity extends AppCompatActivity
 
         NavigationView navigationView = (NavigationView) findViewById(R.id.nav_view);
         navigationView.setNavigationItemSelectedListener(this);
-        navigationView.setCheckedItem(R.id.nav_path);
+        navigationView.setCheckedItem(R.id.nav_record);
 
         FragmentManager fragmentManager = getFragmentManager();
         FragmentTransaction transaction = fragmentManager.beginTransaction();
 
-        Fragment homeFragment = PathFragment.getFragment();
-        transaction.add(R.id.content, homeFragment, "Path");
-        currFrag = homeFragment;
+        if (savedInstanceState != null) {
+            SharedPreferences sp = getPreferences(MODE_PRIVATE);
+            String tag = sp.getString("CurrFrag", null);
+            if (tag != null) {
+                Fragment fragment = fragmentManager.findFragmentByTag(tag);
+                currFrag = fragment;
+                fragmentManager.beginTransaction().show(fragment).commit();
+            }
+            return;
+        }
+
+        if (currFrag == null) {
+            Fragment homeFragment = RecordFragment.getFragment();
+            transaction.add(R.id.content, homeFragment, "Record");
+            currFrag = homeFragment;
+        } else {
+            transaction.show(currFrag);
+        }
         transaction.commit();
 
-
     }
 
     @Override
-    protected void onResume() {
-        super.onResume();
-        ((ViewGroup)findViewById(android.R.id.content)).getChildAt(0).invalidate();
+    protected void onStop() {
+        super.onStop();
+        SharedPreferences sp = getPreferences(MODE_PRIVATE);
+        SharedPreferences.Editor editor = sp.edit();
+        editor.putString("CurrFrag", currFrag.getTag());
+        editor.commit();
+
     }
 
+    /*@Override
+    protected void onPause() {
+        super.onPause();
+        String[] tags = new String[] {"Record", "File", "Path", "Contact", "Setting"};
+        FragmentManager fragmentManager = getFragmentManager();
+        FragmentTransaction fragmentTransaction = fragmentManager.beginTransaction();
+        for (String tag: tags) {
+            Fragment fragment = fragmentManager.findFragmentByTag(tag);
+            if (fragment != null) {
+                fragmentTransaction.hide(fragment);
+            }
+        }
+        fragmentTransaction.show(currFrag);
+        fragmentTransaction.commit();
+    }*/
+
     @Override
-    protected void onStart() {
-        super.onStart();
-        loadContacts();
+    protected void onDestroy() {
+        super.onDestroy();
     }
 
     @Override
@@ -125,7 +160,6 @@ public class MainActivity extends AppCompatActivity
                             @Override
                             public void onClick(SweetAlertDialog sDialog) {
                                 deleteAllVideo();
-                                FileFragment.getFragment().onResume();
                                 sDialog.setTitleText("清空成功")
                                         .setConfirmClickListener(null)
                                         .changeAlertType(SweetAlertDialog.SUCCESS_TYPE);
@@ -144,7 +178,9 @@ public class MainActivity extends AppCompatActivity
                         .setConfirmClickListener(new SweetAlertDialog.OnSweetClickListener() {
                             @Override
                             public void onClick(SweetAlertDialog sDialog) {
+
                                 deleteAllContact();
+
                                 sDialog.setTitleText("清空成功")
                                         .setConfirmClickListener(null)
                                         .changeAlertType(SweetAlertDialog.SUCCESS_TYPE);
@@ -163,7 +199,9 @@ public class MainActivity extends AppCompatActivity
                         .setConfirmClickListener(new SweetAlertDialog.OnSweetClickListener() {
                             @Override
                             public void onClick(SweetAlertDialog sDialog) {
+
                                 deleteAllPath();
+
                                 sDialog.setTitleText("清空成功")
                                         .setConfirmClickListener(null)
                                         .changeAlertType(SweetAlertDialog.SUCCESS_TYPE);
@@ -180,21 +218,37 @@ public class MainActivity extends AppCompatActivity
         return true;
     }
 
-    private void deleteAllPath() {
-        PublicDate.paths.clear();
-        PathFragment.getFragment().saveWheelPath(PublicDate.paths);
-        PathFragment.getFragment().onResume();
+    private void deleteAllVideo() {
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                FileFragment.getFragment().deleteAllVideo();
+            }
+        }).start();
+        FileFragment.getFragment().clearFileCache();
+        FileFragment.getFragment().onResume();
     }
 
-    @Override
-    protected void onPause() {
-        super.onPause();
+    private void deleteAllPath() {
+        PublicDate.paths.clear();
+        PathFragment.getFragment().onResume();
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                PathFragment.getFragment().saveWheelPath(PublicDate.paths);
+            }
+        }).start();
     }
 
     private void deleteAllContact() {
         PublicDate.contactors.clear();
-        saveContacts(PublicDate.contactors);
         ContactFragment.getFragment().onResume();
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                ContactFragment.getFragment().saveContacts(PublicDate.contactors);
+            }
+        }).start();
     }
 
     @Override
@@ -230,60 +284,13 @@ public class MainActivity extends AppCompatActivity
                         .setConfirmClickListener(null)
                         .show();
             } else {
-                saveContacts(PublicDate.contactors);
                 ContactFragment.getFragment().onResume();
-            }
-        }
-    }
-
-    public void saveContacts(List<Contactor> contactors) {
-        try {
-            FileOutputStream fos = this.openFileOutput("Contacts", Context.MODE_PRIVATE);
-            ObjectOutputStream oos = new ObjectOutputStream(fos);
-            for (Contactor contact: contactors) {
-                oos.writeObject(contact);
-            }
-            oos.writeObject(null);
-            oos.close();
-            fos.close();
-        } catch (FileNotFoundException e) {
-            e.printStackTrace();
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-    }
-
-    public void loadContacts() {
-        PublicDate.contactors = new ArrayList<>();
-        try {
-            FileInputStream fis = this.openFileInput("Contacts");
-            ObjectInputStream ois = new ObjectInputStream(fis);
-            Contactor contact = (Contactor) ois.readObject();
-            while(contact != null) {
-                PublicDate.contactors.add(contact);
-                contact = (Contactor) ois.readObject();
-            }
-            ois.close();
-            fis.close();
-
-        } catch (FileNotFoundException e) {
-            e.printStackTrace();
-        } catch (StreamCorruptedException e) {
-            e.printStackTrace();
-        } catch (IOException e) {
-            e.printStackTrace();
-        } catch (ClassNotFoundException e) {
-            e.printStackTrace();
-        }
-    }
-
-    private void deleteAllVideo() {
-        String videoFilePath = getFilesDir().getAbsolutePath();
-        File dir = new File(videoFilePath);
-        File[] files = dir.listFiles();
-        for (File file : files) {
-            if (file.isFile()) {
-                file.delete();
+                new Thread(new Runnable() {
+                    @Override
+                    public void run() {
+                        ContactFragment.getFragment().saveContacts(PublicDate.contactors);
+                    }
+                }).start();
             }
         }
     }
@@ -333,10 +340,10 @@ public class MainActivity extends AppCompatActivity
             }
         }
         else if (id == R.id.nav_friends) {
-            fragment = fragmentManager.findFragmentByTag("Contacts");
+            fragment = fragmentManager.findFragmentByTag("Contact");
             if (fragment == null) {
                 fragment = ContactFragment.getFragment();
-                transaction = transaction.add(R.id.content, fragment, "Contacts");
+                transaction = transaction.add(R.id.content, fragment, "Contact");
             }
         } /*else if (id == R.id.nav_camera) {
             fragment = fragmentManager.findFragmentByTag("Camera");
@@ -355,8 +362,7 @@ public class MainActivity extends AppCompatActivity
         //transaction = transaction.setCustomAnimations(R.animator.slide_in_left, R.animator.slide_out_right);
 
         if (currFrag != fragment) {
-            transaction.hide(currFrag).show(fragment).commit();
-            currFrag.onPause();
+            transaction.replace(R.id.content, fragment).commit();
             currFrag = fragment;
         }
 

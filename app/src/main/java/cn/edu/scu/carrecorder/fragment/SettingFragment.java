@@ -5,6 +5,8 @@ import android.content.SharedPreferences;
 import android.media.CamcorderProfile;
 import android.os.Bundle;
 import android.app.Fragment;
+import android.os.Handler;
+import android.os.Message;
 import android.support.v7.app.ActionBarDrawerToggle;
 import android.support.v7.widget.Toolbar;
 import android.view.Gravity;
@@ -76,19 +78,49 @@ public class SettingFragment extends Fragment {
     @InjectView(R.id.layout_clear)
     LinearLayout clearAll;
 
+    Handler handler;
+    SharedPreferences sp;
+
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container,
                              Bundle savedInstanceState) {
+
         View view = inflater.inflate(R.layout.fragment_setting, container, false);
         ButterKnife.inject(this, view);
+
         initToolbar();
-        initView();
+
+        handler = new Handler() {
+            @Override
+            public void handleMessage(Message msg) {
+                switch (msg.what) {
+                    case 1:
+                        initView();
+                        break;
+                }
+            }
+        };
+
+        Runnable getSP = new Runnable() {
+            @Override
+            public void run() {
+                try {
+                    Thread.sleep(100);
+                    sp = getActivity().getSharedPreferences("AppConfig", Context.MODE_PRIVATE);
+                    handler.sendEmptyMessage(1);
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+            }
+        };
+
+        new Thread(getSP).start();
+
         setListener();
         return view;
     }
 
     private void initView() {
-        SharedPreferences sp = getActivity().getSharedPreferences("AppConfig", Context.MODE_PRIVATE);
         initSwitches(sp);
         int quality = sp.getInt("Quality", PublicDate.defaultQuality);
         int maxDuration = sp.getInt("MaxDuration", PublicDate.defaultDuration);

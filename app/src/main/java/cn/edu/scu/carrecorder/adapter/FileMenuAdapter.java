@@ -25,6 +25,7 @@ import com.yanzhenjie.recyclerview.swipe.SwipeMenuAdapter;
 import java.util.List;
 
 import cn.edu.scu.carrecorder.R;
+import cn.edu.scu.carrecorder.classes.FileInfo;
 import cn.edu.scu.carrecorder.listener.OnItemClickListener;
 
 /**
@@ -32,14 +33,12 @@ import cn.edu.scu.carrecorder.listener.OnItemClickListener;
  */
 public class FileMenuAdapter extends SwipeMenuAdapter<FileMenuAdapter.DefaultViewHolder> {
 
-    private List<String> titles;
-    private List<Integer> durations;
+    private List<FileInfo> files;
 
     private OnItemClickListener mOnItemClickListener;
 
-    public FileMenuAdapter(List<String> titles, List<Integer> durations) {
-        this.titles = titles;
-        this.durations = durations;
+    public FileMenuAdapter(List<FileInfo> files) {
+        this.files = files;
     }
 
     public void setOnItemClickListener(OnItemClickListener onItemClickListener) {
@@ -48,7 +47,7 @@ public class FileMenuAdapter extends SwipeMenuAdapter<FileMenuAdapter.DefaultVie
 
     @Override
     public int getItemCount() {
-        return titles == null ? 0 : titles.size();
+        return files == null ? 0 : files.size();
     }
 
     @Override
@@ -63,7 +62,7 @@ public class FileMenuAdapter extends SwipeMenuAdapter<FileMenuAdapter.DefaultVie
 
     @Override
     public void onBindViewHolder(FileMenuAdapter.DefaultViewHolder holder, int position) {
-        holder.setData(titles.get(position), durations.get(position));
+        holder.setData(files.get(position).getName(), files.get(position).getDuration());
         holder.setOnItemClickListener(mOnItemClickListener);
     }
 
@@ -83,10 +82,10 @@ public class FileMenuAdapter extends SwipeMenuAdapter<FileMenuAdapter.DefaultVie
             this.mOnItemClickListener = onItemClickListener;
         }
 
-        public void setData(String title, int duration) {
+        public void setData(String title, long duration) {
             this.tvTitle.setText(title);
 
-            String text = "时长:";
+            String text = "";
             if (duration / 60 / 60 != 0) {
                 text += duration / 60 / 60 + "时" + duration / 60 + "分";
             }

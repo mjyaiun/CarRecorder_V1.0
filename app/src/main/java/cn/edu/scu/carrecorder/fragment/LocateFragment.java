@@ -80,6 +80,7 @@ public class LocateFragment extends Fragment implements LocationSource,
             saveWheelPath(PublicDate.paths);
             path.clear();
             aMap.clear();
+            setUpMap();
         }
         this.lineDrawingOn = lineDrawingOn;
     }
@@ -111,6 +112,17 @@ public class LocateFragment extends Fragment implements LocationSource,
         } catch (IOException e) {
             e.printStackTrace();
         }
+    }
+
+    @Override
+    public void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        setRetainInstance(true);
+    }
+
+    @Override
+    public void onDetach() {
+        super.onDetach();
     }
 
     @Nullable
@@ -162,7 +174,7 @@ public class LocateFragment extends Fragment implements LocationSource,
                     CameraUpdate newPos = CameraUpdateFactory.newCameraPosition(new CameraPosition(newLatLng, 20, 30, 0));
                     aMap.animateCamera(newPos);
 
-                    /*if (rateReduced) {
+                    if (rateReduced) {
                         if (distance >= 165) {
                             return;
                         } else if (distance <= 30) {
@@ -173,12 +185,12 @@ public class LocateFragment extends Fragment implements LocationSource,
                     } else {
                         if (distance >= 65) {
                             return;
-                        } else if (distance <= 10) {
+                        } else if (distance <= 3) {
                             stopCount += 2;
                         } else {
                             stopCount = 0;
                         }
-                    }*/
+                    }
 
                     Log.e("Amap", amapLocation.getLatitude() + "," + amapLocation.getLongitude());
                     if (lineDrawingOn) {

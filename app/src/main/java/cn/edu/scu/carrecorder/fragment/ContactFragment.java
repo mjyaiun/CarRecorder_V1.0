@@ -1,10 +1,14 @@
 package cn.edu.scu.carrecorder.fragment;
 
-import android.app.FragmentManager;
+import android.app.Activity;
+import android.app.Fragment;
+import android.content.Context;
 import android.content.Intent;
+import android.graphics.Color;
 import android.net.Uri;
 import android.os.Bundle;
-import android.app.Fragment;
+import android.os.Handler;
+import android.os.Message;
 import android.support.v7.app.ActionBarDrawerToggle;
 import android.support.v7.widget.DefaultItemAnimator;
 import android.support.v7.widget.LinearLayoutManager;
@@ -21,15 +25,20 @@ import com.yanzhenjie.recyclerview.swipe.SwipeMenuCreator;
 import com.yanzhenjie.recyclerview.swipe.SwipeMenuItem;
 import com.yanzhenjie.recyclerview.swipe.SwipeMenuRecyclerView;
 
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
+import java.io.StreamCorruptedException;
 import java.util.List;
 
 import butterknife.ButterKnife;
 import butterknife.InjectView;
 import cn.edu.scu.carrecorder.R;
-import cn.edu.scu.carrecorder.activity.JumpActivity;
 import cn.edu.scu.carrecorder.activity.MainActivity;
 import cn.edu.scu.carrecorder.adapter.ContactorMenuAdapter;
-import cn.edu.scu.carrecorder.adapter.FileMenuAdapter;
 import cn.edu.scu.carrecorder.classes.Contactor;
 import cn.edu.scu.carrecorder.customview.ListViewDecoration;
 import cn.edu.scu.carrecorder.listener.OnItemClickListener;
@@ -45,28 +54,78 @@ public class ContactFragment extends Fragment {
     @InjectView(R.id.tips_contact)
     TextView tips;
     ContactorMenuAdapter mMenuAdapter;
-
-    boolean flag = true;
-
+    private static final int CONTACT_LOADED = 441;
+    private static final int CONTACT_LOAD_START = 918;
+    Handler handler;
+    Runnable getContactsThread;
+    View view;
     private static ContactFragment contactFragment = new ContactFragment();
 
     public static ContactFragment getFragment() {
         return contactFragment;
     }
 
+    /*@Override
+    public void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        setRetainInstance(true);
+    }*/
+
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container,
                              Bundle savedInstanceState) {
-        View view = inflater.inflate(R.layout.fragment_contact, container, false);
+
+        view = inflater.inflate(R.layout.fragment_contact, container, false);
         ButterKnife.inject(this, view);
+
         initToolbar();
+
+        handler = new Handler() {
+            @Override
+            public void handleMessage(Message msg) {
+                switch (msg.what) {
+                    case CONTACT_LOADED:
+                        initList();
+                        break;
+                    case CONTACT_LOAD_START:
+                        break;
+                }
+            }
+        };
+        getContactsThread = new Runnable() {
+            @Override
+            public void run() {
+                try {
+                    Thread.sleep(300);
+                    handler.sendEmptyMessage(CONTACT_LOAD_START);
+                    loadContacts();
+                    Thread.sleep(200);
+                    handler.sendEmptyMessage(CONTACT_LOADED);
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+            }
+        };
+
+        new Thread(getContactsThread).start();
+
         return view;
+    }
+
+    @Override
+    public void onAttach(Activity activity) {
+        super.onAttach(activity);
     }
 
     @Override
     public void onResume() {
         super.onResume();
         initList();
+    }
+
+    @Override
+    public void onDetach() {
+        super.onDetach();
     }
 
     private SwipeMenuCreator smc = new SwipeMenuCreator() {
@@ -81,7 +140,40 @@ public class ContactFragment extends Fragment {
             swipeRightMenu.addMenuItem(deleteItem);
         }
     };
+
+    public void loadContacts() {
+        PublicDate.contactors.clear();
+        try {
+            if (getActivity() == null) {
+                return;
+            }
+            FileInputStream fis = getActivity().openFileInput("Contacts");
+            ObjectInputStream ois = new ObjectInputStream(fis);
+            Contactor contact = (Contactor) ois.readObject();
+            while(contact != null) {
+                PublicDate.contactors.add(contact);
+                contact = (Contactor) ois.readObject();
+            }
+            ois.close();
+            fis.close();
+
+        } catch (FileNotFoundException e) {
+            e.printStackTrace();
+        } catch (StreamCorruptedException e) {
+            e.printStackTrace();
+        } catch (IOException e) {
+            e.printStackTrace();
+        } catch (ClassNotFoundException e) {
+            e.printStackTrace();
+        }
+    }
+
     private void initList() {
+        if (PublicDate.contactors.size() == 0) {
+            tips.setVisibility(View.VISIBLE);
+        } else {
+            tips.setVisibility(View.GONE);
+        }
 
         contactList.setSwipeMenuCreator(smc);
         contactList.setLayoutManager(new LinearLayoutManager(getActivity()));// 布局管理器。
@@ -89,15 +181,10 @@ public class ContactFragment extends Fragment {
         contactList.setItemAnimator(new DefaultItemAnimator());// 设置Item默认动画，加也行，不加也行。
         contactList.addItemDecoration(new ListViewDecoration());
         contactList.setSwipeMenuItemClickListener(osmic);
-        if (PublicDate.contactors.size() == 0) {
-            tips.setVisibility(View.VISIBLE);
-        } else {
-            tips.setVisibility(View.GONE);
-        }
+
         mMenuAdapter = new ContactorMenuAdapter(PublicDate.contactors.size() == 0? null:PublicDate.contactors);
         mMenuAdapter.setOnItemClickListener(onItemClickListener);
         contactList.setAdapter(mMenuAdapter);
-
     }
 
     private OnSwipeMenuItemClickListener osmic = new OnSwipeMenuItemClickListener() {
@@ -118,7 +205,7 @@ public class ContactFragment extends Fragment {
                                 @Override
                                 public void onClick(SweetAlertDialog sDialog) {
                                     PublicDate.contactors.remove(menuPosition);
-                                    ((MainActivity)getActivity()).saveContacts(PublicDate.contactors);
+                                    saveContacts(PublicDate.contactors);
                                     sDialog.setTitleText("删除成功")
                                             .setContentText(name + "已删除")
                                             .setConfirmClickListener(null)
@@ -138,12 +225,29 @@ public class ContactFragment extends Fragment {
         }
     };
 
+    public void saveContacts(List<Contactor> contactors) {
+        try {
+            FileOutputStream fos = getActivity().openFileOutput("Contacts", Context.MODE_PRIVATE);
+            ObjectOutputStream oos = new ObjectOutputStream(fos);
+            for (Contactor contact: contactors) {
+                oos.writeObject(contact);
+            }
+            oos.writeObject(null);
+            oos.close();
+            fos.close();
+        } catch (FileNotFoundException e) {
+            e.printStackTrace();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
     private OnItemClickListener onItemClickListener = new OnItemClickListener() {
         String number;
         @Override
         public void onItemClick(int position) {
             number = PublicDate.contactors.get(position).getPhoneNumber();
-            SweetAlertDialog dialog = new SweetAlertDialog(getActivity(), SweetAlertDialog.NORMAL_TYPE)
+            new SweetAlertDialog(getActivity(), SweetAlertDialog.NORMAL_TYPE)
                     .setTitleText("确认拨打")
                     .setContentText(number)
                     .setConfirmText("确定")
@@ -153,12 +257,11 @@ public class ContactFragment extends Fragment {
                         @Override
                         public void onClick(SweetAlertDialog sweetAlertDialog) {
                             sweetAlertDialog.dismissWithAnimation();
-                            Intent intent = new Intent(getActivity(), JumpActivity.class);
-                            intent.putExtra("Number", number);
+                            Intent intent = new Intent(Intent.ACTION_CALL, Uri.parse("tel:" + number));
                             startActivity(intent);
                         }
-                    });
-            dialog.show();
+                    }).show();
+
         }
     };
 

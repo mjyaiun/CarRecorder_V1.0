@@ -1,11 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <color name="colorPrimary">#3F51B5</color>
-    <color name="colorPrimaryDark">#303F9F</color>
+    <color name="colorPrimary">#3fb5ab</color><!--#3F51B5-->
+    <color name="colorPrimaryDark">#309f92</color><!--#303F9F-->
     <color name="colorAccent">#FF4081</color>
     <color name="list_qualities_bg">#fcd9061b</color>
     <color name="white">#FFFFFF</color>
-    <color name="toolbar_blue">#3F51B5</color>
+    <color name="toolbar_blue">#3fb5a5</color>
     <color name="red_normal">#FF0000</color>
     <color name="red_pressed">#FF6666</color>
 </resources>

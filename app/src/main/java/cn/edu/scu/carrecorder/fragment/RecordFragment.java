@@ -7,11 +7,14 @@ import android.content.Context;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.content.res.Configuration;
+import android.graphics.Color;
 import android.graphics.Rect;
 import android.hardware.Camera;
 import android.media.CamcorderProfile;
 import android.media.MediaRecorder;
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.Message;
 import android.os.SystemClock;
 import android.util.Log;
 import android.view.LayoutInflater;
@@ -33,6 +36,7 @@ import java.io.File;
 import java.io.IOException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Date;
 import java.util.List;
 
@@ -40,8 +44,10 @@ import butterknife.ButterKnife;
 import butterknife.InjectView;
 import cn.edu.scu.carrecorder.R;
 import cn.edu.scu.carrecorder.activity.MainActivity;
+import cn.edu.scu.carrecorder.classes.FileInfo;
 import cn.edu.scu.carrecorder.util.PublicDate;
 import cn.edu.scu.carrecorder.util.VideoSize;
+import cn.pedant.SweetAlert.SweetAlertDialog;
 
 public class RecordFragment extends Fragment implements Callback{
     private static  final int FOCUS_AREA_SIZE= 500;
@@ -88,6 +94,10 @@ public class RecordFragment extends Fragment implements Callback{
     boolean powerSavingOn = false;
     boolean screenLightDecreased = false;
     int powerSavingCount = 0;
+    Handler handler;
+    private static final int CAMERA_OPENED = 626;
+    private static final int CAMERA_OPEN_START = 23;
+    SweetAlertDialog pDialog;
 
     private static RecordFragment homeFragment = new RecordFragment();
 
@@ -98,12 +108,53 @@ public class RecordFragment extends Fragment implements Callback{
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container,
                              Bundle savedInstanceState) {
+
         View view = inflater.inflate(R.layout.fragment_record, container, false);
-        myContext = getActivity();
         ButterKnife.inject(this, view);
-        loadMapFrag();
+
+        myContext = getActivity();
+        pDialog = new SweetAlertDialog(getActivity(), SweetAlertDialog.PROGRESS_TYPE);
+        pDialog.getProgressHelper().setBarColor(Color.parseColor("#A5DC86"));
+        pDialog.setTitleText("相机初始化中");
+        pDialog.setCancelable(false);
+
+        handler = new Handler() {
+            @Override
+            public void handleMessage(Message msg) {
+                switch (msg.what) {
+                    case CAMERA_OPEN_START:
+                        pDialog.show();
+                        break;
+                    case CAMERA_OPENED:
+                        pDialog.dismissWithAnimation();
+                        break;
+                }
+            }
+        };
+
+        Runnable loadMap = new Runnable() {
+            @Override
+            public void run() {
+                try {
+                    Thread.sleep(300);
+                    loadMapFrag();
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+            }
+        };
+        new Thread(loadMap).start();
+
         initialize();
         return view;
+    }
+
+    @Override
+    public void onDetach() {
+        super.onDetach();
+        FragmentManager fragmentManager =getFragmentManager();
+        FragmentTransaction transaction = fragmentManager.beginTransaction();
+        transaction.remove(locateFragment).commit();
     }
 
     public void refreshInfo(String address, String speed) {
@@ -186,6 +237,13 @@ public class RecordFragment extends Fragment implements Callback{
 
         mCamera = Camera.open(cameraId);
         try {
+            mCamera.autoFocus(new Camera.AutoFocusCallback() {
+                @Override
+                public void onAutoFocus(boolean success, Camera camera) {
+                    int a = 0;
+                    a ++;
+                }
+            });
             mCamera.setPreviewDisplay(preview.getHolder());
             VideoSize.optimizeCameraDimens(mCamera, myContext);
             mCamera.startPreview();
@@ -211,6 +269,7 @@ public class RecordFragment extends Fragment implements Callback{
                 ((MainActivity)getActivity()).openDrawer();
             }
         });
+
         cameraPreview.setOnTouchListener(new View.OnTouchListener() {
             @Override
             public boolean onTouch(View v, MotionEvent event) {
@@ -340,6 +399,9 @@ public class RecordFragment extends Fragment implements Callback{
     }
 
     public void stopRecording() {
+        Collections.reverse(PublicDate.files);
+        PublicDate.files.add(new FileInfo(tempFile.getName(), tempFile.getAbsolutePath(), countUp));
+        Collections.reverse(PublicDate.files);
         mediaRecorder.stop(); // stop the recording
         releaseMediaRecorder(); // release the MediaRecorder object
         recording = false;
@@ -405,7 +467,7 @@ public class RecordFragment extends Fragment implements Callback{
         SharedPreferences sp = getActivity().getSharedPreferences("AppConfig", Context.MODE_PRIVATE);
         int quality = sp.getInt("Quality", PublicDate.defaultQuality);
         int maxDuration = sp.getInt("MaxDuration", PublicDate.defaultDuration);
-        long maxFileSize = sp.getLong("MaxFileSize", PublicDate.defaultFileSize);
+        //long maxFileSize = sp.getLong("MaxFileSize", PublicDate.defaultFileSize);
         boolean audioOn = sp.getBoolean("AudioOn", true);
         powerSavingOn = sp.getBoolean("PowerSaving", true);
 
@@ -456,7 +518,21 @@ public class RecordFragment extends Fragment implements Callback{
 
     @Override
     public void surfaceCreated(SurfaceHolder holder) {
-        openCamera();
+        Runnable openCamera = new Runnable() {
+            @Override
+            public void run() {
+                try {
+                    Thread.sleep(300);
+                    handler.sendEmptyMessage(CAMERA_OPEN_START);
+                    openCamera();
+                    Thread.sleep(200);
+                    handler.sendEmptyMessage(CAMERA_OPENED);
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+            }
+        };
+        new Thread(openCamera).start();
     }
 
     @Override

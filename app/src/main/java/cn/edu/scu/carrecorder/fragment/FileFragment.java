@@ -1,11 +1,14 @@
 package cn.edu.scu.carrecorder.fragment;
 
 import android.content.Intent;
+import android.graphics.Color;
 import android.media.MediaMetadataRetriever;
 import android.net.Uri;
 import android.os.Bundle;
 import android.app.Fragment;
 import android.os.Environment;
+import android.os.Handler;
+import android.os.Message;
 import android.support.v7.app.ActionBarDrawerToggle;
 import android.support.v7.widget.DefaultItemAnimator;
 import android.support.v7.widget.LinearLayoutManager;
@@ -34,6 +37,7 @@ import cn.edu.scu.carrecorder.R;
 import cn.edu.scu.carrecorder.activity.MainActivity;
 import cn.edu.scu.carrecorder.activity.RecordPlayActivity;
 import cn.edu.scu.carrecorder.adapter.FileMenuAdapter;
+import cn.edu.scu.carrecorder.classes.FileInfo;
 import cn.edu.scu.carrecorder.customview.ListViewDecoration;
 import cn.edu.scu.carrecorder.listener.OnItemClickListener;
 import cn.edu.scu.carrecorder.util.PublicDate;
@@ -48,11 +52,12 @@ public class FileFragment extends Fragment {
     @InjectView(R.id.tips)
     TextView tips;
 
-    List<File> files = new ArrayList<File>();
     FileMenuAdapter mFileMenuAdapter;
-    List<String> titles;
-    List<Integer> durations;
-
+    private static final int FILE_LOADED = 391;
+    private static final int FILE_LOAD_START = 249;
+    Handler handler;
+    Runnable getFileThread;
+    View view;
     private static FileFragment fileFragment = new FileFragment();
 
     public static FileFragment getFragment() {
@@ -64,33 +69,49 @@ public class FileFragment extends Fragment {
                              Bundle savedInstanceState) {
         View view = inflater.inflate(R.layout.fragment_file, container, false);
         ButterKnife.inject(this, view);
+        initToolbar();
+
+        handler = new Handler() {
+            @Override
+            public void handleMessage(Message msg) {
+                switch (msg.what) {
+                    case FILE_LOADED:
+                        initList();
+                        break;
+                    case FILE_LOAD_START:
+                        break;
+                }
+            }
+        };
+        getFileThread = new Runnable() {
+            @Override
+            public void run() {
+                try {
+                    Thread.sleep(300);
+                    handler.sendEmptyMessage(FILE_LOAD_START);
+                    getFiles();
+                    Thread.sleep(200);
+                    handler.sendEmptyMessage(FILE_LOADED);
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+
+            }
+        };
+        new Thread(getFileThread).start();
         return view;
     }
 
     @Override
     public void onResume() {
         super.onResume();
-        initToolbar();
-        getFiles();
         initList();
-    }
-
-    public void notifyDataChange() {
-        for (int i=0; i<titles.size();i ++) {
-            mFileMenuAdapter.notifyItemRemoved(0);
-        }
     }
 
     private SwipeMenuCreator smc = new SwipeMenuCreator() {
         @Override
         public void onCreateMenu(SwipeMenu swipeLeftMenu, SwipeMenu swipeRightMenu, int viewType) {
             int size = getResources().getDimensionPixelSize(R.dimen.item_height);
-            /*SwipeMenuItem saveItem = new SwipeMenuItem(getActivity())
-                    .setImage(R.drawable.save)
-                    .setWidth(size)
-                    .setHeight(size)
-                    .setBackgroundDrawable(R.drawable.selector_red);
-            swipeRightMenu.addMenuItem(saveItem);*/
             SwipeMenuItem deleteItem = new SwipeMenuItem(getActivity())
                     .setImage(R.drawable.delete)
                     .setWidth(size)
@@ -99,7 +120,29 @@ public class FileFragment extends Fragment {
             swipeRightMenu.addMenuItem(deleteItem);
         }
     };
+
+    public void clearFileCache() {
+        PublicDate.files.clear();
+    }
+
+    public void deleteAllVideo() {
+        String videoFilePath = getActivity().getFilesDir().getAbsolutePath();
+        File dir = new File(videoFilePath);
+        File[] files = dir.listFiles();
+        for (File file : files) {
+            if (file.isFile()) {
+                file.delete();
+            }
+        }
+    }
+
     private void initList() {
+        if (PublicDate.files.size() == 0) {
+            tips.setVisibility(View.VISIBLE);
+        } else {
+            tips.setVisibility(View.GONE);
+        }
+
         filesList.setSwipeMenuCreator(smc);
         filesList.setLayoutManager(new LinearLayoutManager(getActivity()));// 布局管理器。
         filesList.setHasFixedSize(true);// 如果Item够简单，高度是确定的，打开FixSize将提高性能。
@@ -107,9 +150,7 @@ public class FileFragment extends Fragment {
         filesList.addItemDecoration(new ListViewDecoration());
         filesList.setSwipeMenuItemClickListener(osmic);
 
-        titles = getTitles();
-        durations = getDurations();
-        mFileMenuAdapter = new FileMenuAdapter(titles, durations);
+        mFileMenuAdapter = new FileMenuAdapter(PublicDate.files);
         mFileMenuAdapter.setOnItemClickListener(onItemClickListener);
         filesList.setAdapter(mFileMenuAdapter);
 
@@ -121,14 +162,14 @@ public class FileFragment extends Fragment {
             closeable.smoothCloseMenu();// 关闭被点击的菜单。
             final int itemPos = adapterPosition;
             switch (menuPosition) {
-                case 1:
+                /*case 1:
 
                     File saveFile = files.get(adapterPosition);
                     Intent intent = new Intent(Intent.ACTION_MEDIA_SCANNER_SCAN_FILE);
                     intent.setData(Uri.fromFile(saveFile));
                     getActivity().sendBroadcast(intent);
 
-                    break;
+                    break;*/
                 case 0:
                     SweetAlertDialog dialog = new SweetAlertDialog(getActivity(), SweetAlertDialog.WARNING_TYPE)
                             .setTitleText("确定删除？")
@@ -139,11 +180,12 @@ public class FileFragment extends Fragment {
                             .setConfirmClickListener(new SweetAlertDialog.OnSweetClickListener() {
                                 @Override
                                 public void onClick(SweetAlertDialog sDialog) {
-                                    if(files.get(itemPos).delete()) {
-                                        File file_del = files.remove(itemPos);
-                                        titles.remove(itemPos);
+                                    FileInfo fileToDel = PublicDate.files.get(itemPos);
+                                    File file_del = new File(fileToDel.getAbsolutePath());
+                                    if(file_del.delete()) {
+                                        PublicDate.files.remove(itemPos);
                                         sDialog.setTitleText("删除成功")
-                                                .setContentText(file_del.getName() + "已删除")
+                                                .setContentText(fileToDel.getName() + "已删除")
                                                 .setConfirmClickListener(null)
                                                 .changeAlertType(SweetAlertDialog.SUCCESS_TYPE);
                                     }
@@ -165,7 +207,7 @@ public class FileFragment extends Fragment {
     private OnItemClickListener onItemClickListener = new OnItemClickListener() {
         @Override
         public void onItemClick(int position) {
-            String filepath = files.get(position).getAbsolutePath();
+            String filepath = PublicDate.files.get(position).getAbsolutePath();
             Intent intent = new Intent(getActivity(), RecordPlayActivity.class);
             intent.putExtra("filepath", filepath);
             startActivity(intent);
@@ -173,7 +215,10 @@ public class FileFragment extends Fragment {
     };
 
     private void getFiles() {
-        String dirPath = Environment.getExternalStorageDirectory().getAbsolutePath();
+        PublicDate.files.clear();
+        if (getActivity() == null) {
+            return;
+        }
         File dir = getActivity().getFilesDir();
         File[] files = dir.listFiles(new FilenameFilter() {
             @Override
@@ -181,38 +226,20 @@ public class FileFragment extends Fragment {
                 return filename.endsWith(".mp4");
             }
         });
-        this.files.clear();
-        for (File file: files) {
-            this.files.add(file);
-        }
-        Collections.reverse(this.files);
-    }
 
-    private List<Integer> getDurations() {
-        MediaMetadataRetriever mmr;
-        List<Integer> durations = new ArrayList<>();
-        String duration;
         for (File file: files) {
+
+            MediaMetadataRetriever mmr;
+            String duration;
             mmr = new MediaMetadataRetriever();
             mmr.setDataSource(getActivity(), Uri.fromFile(file));
             duration  = mmr.extractMetadata(android.media.MediaMetadataRetriever.METADATA_KEY_DURATION);
-            durations.add((int)(Math.ceil(Integer.parseInt(duration) / 1000)));
             mmr.release();
-        }
-        return durations;
-    }
 
-    private List<String> getTitles() {
-        if (files.size() == 0) {
-            tips.setVisibility(View.VISIBLE);
-            return null;
+            PublicDate.files.add(new FileInfo(file.getName(), file.getAbsolutePath(), Long.parseLong(duration) / 1000 ));
+
         }
-        tips.setVisibility(View.GONE);
-        List<String> titles = new ArrayList<>();
-        for (File file: files) {
-            titles.add(file.getName());
-        }
-        return titles;
+        Collections.reverse(PublicDate.files);
     }
 
     public void initToolbar() {
