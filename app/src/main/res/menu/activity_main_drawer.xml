@@ -11,12 +11,12 @@
             android:icon="@drawable/files"
             android:title="视频文件" />
 
-        <item
+        <!--<item
             android:id="@+id/nav_path"
             android:icon="@drawable/path"
             android:title="行车轨迹">
 
-        </item>
+        </item>-->
 
         <item
             android:id="@+id/nav_friends"

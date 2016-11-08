@@ -49,7 +49,7 @@ import cn.edu.scu.carrecorder.util.PublicDate;
 import cn.edu.scu.carrecorder.util.VideoSize;
 import cn.pedant.SweetAlert.SweetAlertDialog;
 
-public class RecordFragment extends Fragment implements Callback{
+public class RecordFragment extends Fragment implements Callback, Camera.PictureCallback{
     private static  final int FOCUS_AREA_SIZE= 500;
     private Camera mCamera;
     private MediaRecorder mediaRecorder;
@@ -98,10 +98,14 @@ public class RecordFragment extends Fragment implements Callback{
     private static final int CAMERA_OPENED = 626;
     private static final int CAMERA_OPEN_START = 23;
     SweetAlertDialog pDialog;
+    boolean flag = false;
 
     private static RecordFragment homeFragment = new RecordFragment();
 
     public static RecordFragment getFragment() {
+        if (homeFragment == null) {
+            homeFragment = new RecordFragment();
+        }
         return homeFragment;
     }
 
@@ -150,11 +154,13 @@ public class RecordFragment extends Fragment implements Callback{
     }
 
     @Override
+    public void onStop() {
+        super.onStop();
+    }
+
+    @Override
     public void onDetach() {
         super.onDetach();
-        FragmentManager fragmentManager =getFragmentManager();
-        FragmentTransaction transaction = fragmentManager.beginTransaction();
-        transaction.remove(locateFragment).commit();
     }
 
     public void refreshInfo(String address, String speed) {
@@ -207,6 +213,9 @@ public class RecordFragment extends Fragment implements Callback{
     @Override
     public void onPause() {
         super.onPause();
+        FragmentManager fragmentManager =getFragmentManager();
+        FragmentTransaction transaction = fragmentManager.beginTransaction();
+        transaction.remove(locateFragment).commit();
 
         if(recording) {
             stopRecording();
@@ -217,6 +226,19 @@ public class RecordFragment extends Fragment implements Callback{
     @Override
     public void onDestroyView() {
         super.onDestroyView();
+        if (homeFragment != null
+                && getFragmentManager().findFragmentById(homeFragment.getId()) != null
+                && getActivity() != null && ! flag) {
+            flag = false;
+            getFragmentManager().beginTransaction().remove(homeFragment).commit();
+            homeFragment = null;
+        }
+    }
+
+    @Override
+    public void onSaveInstanceState(Bundle outState) {
+        super.onSaveInstanceState(outState);
+        flag = true;
     }
 
     public void openCamera() {
@@ -707,4 +729,9 @@ public class RecordFragment extends Fragment implements Callback{
             }
         }
     };
+
+    @Override
+    public void onPictureTaken(byte[] data, Camera camera) {
+
+    }
 }

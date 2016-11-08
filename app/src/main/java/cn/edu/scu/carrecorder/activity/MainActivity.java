@@ -39,6 +39,7 @@ import cn.edu.scu.carrecorder.R;
 import cn.edu.scu.carrecorder.classes.Contactor;
 import cn.edu.scu.carrecorder.fragment.ContactFragment;
 import cn.edu.scu.carrecorder.fragment.FileFragment;
+import cn.edu.scu.carrecorder.fragment.MonitorFragment;
 import cn.edu.scu.carrecorder.fragment.PathFragment;
 import cn.edu.scu.carrecorder.fragment.RecordFragment;
 import cn.edu.scu.carrecorder.fragment.SettingFragment;
@@ -51,6 +52,7 @@ public class MainActivity extends AppCompatActivity
     Toolbar toolbar;
     DrawerLayout drawer;
     Fragment currFrag;
+    Fragment preFrag;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -76,9 +78,21 @@ public class MainActivity extends AppCompatActivity
             SharedPreferences sp = getPreferences(MODE_PRIVATE);
             String tag = sp.getString("CurrFrag", null);
             if (tag != null) {
+                if (tag.equals("Record")) {
+
+                    fragmentManager.beginTransaction().add(R.id.content, RecordFragment.getFragment(), tag).commit();
+                    currFrag = RecordFragment.getFragment();
+                    return;
+                }
                 Fragment fragment = fragmentManager.findFragmentByTag(tag);
                 currFrag = fragment;
                 fragmentManager.beginTransaction().show(fragment).commit();
+            } else {
+                if (currFrag == null) {
+                    Fragment homeFragment = RecordFragment.getFragment();
+                    transaction.add(R.id.content, homeFragment, "Record");
+                    currFrag = homeFragment;
+                }
             }
             return;
         }
@@ -95,34 +109,23 @@ public class MainActivity extends AppCompatActivity
     }
 
     @Override
-    protected void onStop() {
-        super.onStop();
-        SharedPreferences sp = getPreferences(MODE_PRIVATE);
-        SharedPreferences.Editor editor = sp.edit();
-        editor.putString("CurrFrag", currFrag.getTag());
-        editor.commit();
-
-    }
-
-    /*@Override
     protected void onPause() {
         super.onPause();
-        String[] tags = new String[] {"Record", "File", "Path", "Contact", "Setting"};
-        FragmentManager fragmentManager = getFragmentManager();
-        FragmentTransaction fragmentTransaction = fragmentManager.beginTransaction();
-        for (String tag: tags) {
-            Fragment fragment = fragmentManager.findFragmentByTag(tag);
-            if (fragment != null) {
-                fragmentTransaction.hide(fragment);
-            }
+        if (currFrag instanceof RecordFragment) {
+            currFrag.onDestroyView();
         }
-        fragmentTransaction.show(currFrag);
-        fragmentTransaction.commit();
-    }*/
+    }
 
     @Override
-    protected void onDestroy() {
-        super.onDestroy();
+    protected void onStop() {
+        super.onStop();
+        if (currFrag != null) {
+            SharedPreferences sp = getPreferences(MODE_PRIVATE);
+            SharedPreferences.Editor editor = sp.edit();
+            editor.putString("CurrFrag", currFrag.getTag());
+            editor.commit();
+        }
+
     }
 
     @Override
@@ -312,58 +315,61 @@ public class MainActivity extends AppCompatActivity
     public boolean onNavigationItemSelected(MenuItem item) {
         // Handle navigation view item clicks here.
         int id = item.getItemId();
+
         FragmentManager fragmentManager = getFragmentManager();
         FragmentTransaction transaction = fragmentManager.beginTransaction();
         Fragment fragment = null;
 
         if (id == R.id.nav_record) {
-            fragment = fragmentManager.findFragmentByTag("Record");
-            if (fragment == null) {
-                fragment = RecordFragment.getFragment();
-                transaction = transaction.add(R.id.content, fragment, "Record");
-            }
+            fragment = RecordFragment.getFragment();
+            transaction.add(R.id.content, fragment, "Record");
         } else if (id == R.id.nav_file) {
-            fragment = fragmentManager.findFragmentByTag("File");
-            if (fragment == null) {
-                fragment = FileFragment.getFragment();
-                transaction = transaction.add(R.id.content, fragment, "File");
-            } else {
-                fragment.onResume();
-            }
+
+            fragment = FileFragment.getFragment();
+            transaction.add(R.id.content, fragment, "File");
+
         } else if (id == R.id.nav_path) {
-            fragment = fragmentManager.findFragmentByTag("Path");
-            if (fragment == null) {
-                fragment = PathFragment.getFragment();
-                transaction = transaction.add(R.id.content, fragment, "Path");
-            } else {
-                fragment.onResume();
-            }
+
+            fragment = PathFragment.getFragment();
+            transaction.add(R.id.content, fragment, "Path");
+
         }
         else if (id == R.id.nav_friends) {
-            fragment = fragmentManager.findFragmentByTag("Contact");
-            if (fragment == null) {
-                fragment = ContactFragment.getFragment();
-                transaction = transaction.add(R.id.content, fragment, "Contact");
-            }
-        } /*else if (id == R.id.nav_camera) {
-            fragment = fragmentManager.findFragmentByTag("Camera");
-            if (fragment == null) {
-                fragment = MonitorFragment.getFragment();
-                transaction = transaction.add(R.id.content, fragment, "Camera");
-            }
-        }*/ else if (id == R.id.nav_setting) {
-            fragment = fragmentManager.findFragmentByTag("Setting");
-            if (fragment == null) {
-                fragment = SettingFragment.getFragment();
-                transaction = transaction.add(R.id.content, fragment, "Setting");
-            }
+
+            fragment = ContactFragment.getFragment();
+            transaction.add(R.id.content, fragment, "Contact");
+
+        } else if (id == R.id.nav_camera) {
+
+            fragment = MonitorFragment.getFragment();
+            transaction.add(R.id.content, fragment, "Monitor");
+
+        } else if (id == R.id.nav_setting) {
+
+            fragment = SettingFragment.getFragment();
+            transaction.add(R.id.content, fragment, "Setting");
         }
 
-        //transaction = transaction.setCustomAnimations(R.animator.slide_in_left, R.animator.slide_out_right);
-
         if (currFrag != fragment) {
-            transaction.replace(R.id.content, fragment).commit();
+            if (currFrag instanceof RecordFragment) {
+                currFrag.onPause();
+            }
+            preFrag = currFrag;
+            transaction.hide(currFrag).show(fragment).commit();
             currFrag = fragment;
+            new Thread(new Runnable() {
+                @Override
+                public void run() {
+                    try {
+                        Thread.sleep(1000);
+                        FragmentManager fragmentManager = getFragmentManager();
+                        FragmentTransaction transaction = fragmentManager.beginTransaction();
+                        transaction.remove(preFrag).commit();
+                    } catch (InterruptedException e) {
+                        e.printStackTrace();
+                    }
+                }
+            }).start();
         }
 
         DrawerLayout drawer = (DrawerLayout) findViewById(R.id.drawer_layout);

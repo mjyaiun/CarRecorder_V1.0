@@ -2,6 +2,7 @@ package cn.edu.scu.carrecorder.fragment;
 
 import android.content.Context;
 import android.content.SharedPreferences;
+import android.graphics.Color;
 import android.media.CamcorderProfile;
 import android.os.Bundle;
 import android.app.Fragment;
@@ -40,7 +41,7 @@ public class SettingFragment extends Fragment {
         return settingFragment;
     }
 
-    @InjectView(R.id.toolbar_monitor)
+    @InjectView(R.id.toolbar_setting)
     Toolbar toolbar;
 
     @InjectView(R.id.toggle_button_powersaving)
@@ -80,44 +81,83 @@ public class SettingFragment extends Fragment {
 
     Handler handler;
     SharedPreferences sp;
+    View contentView;
+    RelativeLayout relativeLayout;
+    LayoutInflater layoutInflater;
+    Runnable loadView;
+    View view;
+    SweetAlertDialog pDialog;
 
     @Override
-    public View onCreateView(LayoutInflater inflater, ViewGroup container,
+    public View onCreateView(LayoutInflater inflater, final ViewGroup container,
                              Bundle savedInstanceState) {
 
-        View view = inflater.inflate(R.layout.fragment_setting, container, false);
-        ButterKnife.inject(this, view);
+        view = inflater.inflate(R.layout.fragment_setting, container, false);
+        relativeLayout = (RelativeLayout) view.findViewById(R.id.content);
+        layoutInflater = inflater.from(getActivity());
+        sp = getActivity().getSharedPreferences("AppConfig", Context.MODE_PRIVATE);
 
-        initToolbar();
-
-        handler = new Handler() {
-            @Override
-            public void handleMessage(Message msg) {
-                switch (msg.what) {
-                    case 1:
-                        initView();
-                        break;
-                }
-            }
-        };
-
-        Runnable getSP = new Runnable() {
+        handler = new Handler();
+        pDialog = new SweetAlertDialog(getActivity(), SweetAlertDialog.PROGRESS_TYPE);
+        pDialog.getProgressHelper().setBarColor(Color.parseColor("#A5DC86"));
+        pDialog.setTitleText("加载中,请稍后...");
+        pDialog.setCancelable(false);
+        pDialog.show();
+        handler.postDelayed(new Runnable() {
             @Override
             public void run() {
-                try {
-                    Thread.sleep(100);
-                    sp = getActivity().getSharedPreferences("AppConfig", Context.MODE_PRIVATE);
-                    handler.sendEmptyMessage(1);
-                } catch (InterruptedException e) {
-                    e.printStackTrace();
-                }
+                SettingFragment.this.contentView = layoutInflater.inflate(R.layout.fragment_setting_content, null);
+                SettingFragment.this.relativeLayout.addView(contentView);
+                getViewObj();
+
+                initToolbar();
+                initView();
+                setListener();
+                pDialog.dismissWithAnimation();
             }
-        };
+        }, 500);
 
-        new Thread(getSP).start();
-
-        setListener();
         return view;
+    }
+
+    private  void getViewObj () {
+        toolbar = (Toolbar) contentView.findViewById(R.id.toolbar_setting);
+
+        togBtnPowerSaving = (ToggleButton) contentView.findViewById(R.id.toggle_button_powersaving);
+
+        layoutImgBtnPowerSaving = (RelativeLayout) contentView.findViewById(R.id.img_button_powersaving_layout);
+
+        togBtnAudioOn = (ToggleButton) contentView.findViewById(R.id.toggle_button_audio_on);
+
+        layoutImgBtnAudioOn = (RelativeLayout) contentView.findViewById(R.id.img_button_audio_on_layout);
+
+        togBtnPathRecOn = (ToggleButton) contentView.findViewById(R.id.toggle_button_pathrecon);
+
+        layoutImgBtnPathRecOn = (RelativeLayout) contentView.findViewById(R.id.img_button_pathrecon_layout);
+
+        togBtnAutoStopOn = (ToggleButton) contentView.findViewById(R.id.toggle_button_autostop);
+
+        layoutImgBtnAutoStopOn = (RelativeLayout) contentView.findViewById(R.id.img_button_autostop_layout);
+
+        radioBtnQuality = (GroupButtonView) contentView.findViewById(R.id.quality_selector);
+
+        radioBtnDuration = (GroupButtonView) contentView.findViewById(R.id.duration_selector);
+
+        radioBtnFilesize = (GroupButtonView) contentView.findViewById(R.id.filesize_selector);
+
+        radioBtnStopTime = (GroupButtonView) contentView.findViewById(R.id.stoptime_selector);
+
+        layoutStopTime = (LinearLayout) contentView.findViewById(R.id.layout_stoptime);
+
+        clearAll = (LinearLayout) contentView.findViewById(R.id.layout_clear);
+    }
+
+    @Override
+    public void setUserVisibleHint(boolean isVisibleToUser) {
+        super.setUserVisibleHint(isVisibleToUser);
+        if (! isVisibleToUser) {
+            handler.removeCallbacks(loadView);
+        }
     }
 
     private void initView() {

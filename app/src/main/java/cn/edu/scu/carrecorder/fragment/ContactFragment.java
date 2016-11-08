@@ -59,17 +59,12 @@ public class ContactFragment extends Fragment {
     Handler handler;
     Runnable getContactsThread;
     View view;
+    SweetAlertDialog pDialog;
     private static ContactFragment contactFragment = new ContactFragment();
 
     public static ContactFragment getFragment() {
         return contactFragment;
     }
-
-    /*@Override
-    public void onCreate(Bundle savedInstanceState) {
-        super.onCreate(savedInstanceState);
-        setRetainInstance(true);
-    }*/
 
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container,
@@ -79,6 +74,10 @@ public class ContactFragment extends Fragment {
         ButterKnife.inject(this, view);
 
         initToolbar();
+        pDialog = new SweetAlertDialog(getActivity(), SweetAlertDialog.PROGRESS_TYPE);
+        pDialog.getProgressHelper().setBarColor(Color.parseColor("#A5DC86"));
+        pDialog.setTitleText("联系人加载中");
+        pDialog.setCancelable(false);
 
         handler = new Handler() {
             @Override
@@ -86,8 +85,10 @@ public class ContactFragment extends Fragment {
                 switch (msg.what) {
                     case CONTACT_LOADED:
                         initList();
+                        pDialog.dismissWithAnimation();
                         break;
                     case CONTACT_LOAD_START:
+                        pDialog.show();
                         break;
                 }
             }

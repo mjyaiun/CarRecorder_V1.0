@@ -58,6 +58,7 @@ public class FileFragment extends Fragment {
     Handler handler;
     Runnable getFileThread;
     View view;
+    SweetAlertDialog pDialog;
     private static FileFragment fileFragment = new FileFragment();
 
     public static FileFragment getFragment() {
@@ -70,6 +71,10 @@ public class FileFragment extends Fragment {
         View view = inflater.inflate(R.layout.fragment_file, container, false);
         ButterKnife.inject(this, view);
         initToolbar();
+        pDialog = new SweetAlertDialog(getActivity(), SweetAlertDialog.PROGRESS_TYPE);
+        pDialog.getProgressHelper().setBarColor(Color.parseColor("#A5DC86"));
+        pDialog.setTitleText("视频文件加载中");
+        pDialog.setCancelable(false);
 
         handler = new Handler() {
             @Override
@@ -77,8 +82,10 @@ public class FileFragment extends Fragment {
                 switch (msg.what) {
                     case FILE_LOADED:
                         initList();
+                        pDialog.dismissWithAnimation();
                         break;
                     case FILE_LOAD_START:
+                        pDialog.show();
                         break;
                 }
             }
@@ -87,7 +94,7 @@ public class FileFragment extends Fragment {
             @Override
             public void run() {
                 try {
-                    Thread.sleep(300);
+                    Thread.sleep(500);
                     handler.sendEmptyMessage(FILE_LOAD_START);
                     getFiles();
                     Thread.sleep(200);
