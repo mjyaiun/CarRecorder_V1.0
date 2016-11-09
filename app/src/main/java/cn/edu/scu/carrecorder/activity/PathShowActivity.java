@@ -34,6 +34,7 @@ import butterknife.ButterKnife;
 import butterknife.InjectView;
 import cn.edu.scu.carrecorder.R;
 import cn.edu.scu.carrecorder.classes.CLatLonPoint;
+import cn.pedant.SweetAlert.SweetAlertDialog;
 
 public class PathShowActivity extends AppCompatActivity {
     @InjectView(R.id.path_name)
@@ -70,8 +71,9 @@ public class PathShowActivity extends AppCompatActivity {
     }
 
     private void drawOverlay() {
+
         CameraUpdate newPos = CameraUpdateFactory.newCameraPosition(new CameraPosition(
-                                    points.get((points.size()-1) / 2).toMapPoint(), 18, 0, 0));
+                                    points.get((points.size()-1) / 2).toMapPoint(), 15, 0, 0));
         aMap.animateCamera(newPos);
 
         DrivePath path = new DrivePath();

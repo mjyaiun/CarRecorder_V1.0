@@ -33,6 +33,7 @@ import java.io.ObjectOutputStream;
 import java.io.StreamCorruptedException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Date;
 import java.util.List;
 import java.util.Random;
@@ -138,20 +139,6 @@ public class PathFragment extends Fragment {
         initList();
     }
 
-    /*private void testPath() {
-        List<WheelPath> paths = new ArrayList<>();
-
-        for (int i=0;i < 5;i ++) {
-            ArrayList<CLatLonPoint> points = new ArrayList<>();
-            for (int j=0;j < 5; j ++) {
-                points.add(new CLatLonPoint(30.557785+i*0.1+j*0.01, 103.999942 + i*0.1 + j*0.01));
-            }
-            paths.add(new WheelPath(new SimpleDateFormat("yyyy-MM-dd_HH_mm_ss").format(new Date()), points));
-        }
-
-        saveWheelPath(paths);
-    }*/
-
     public void saveWheelPath(List<WheelPath> paths) {
         try {
             FileOutputStream fos = getActivity().openFileOutput("WheelPath", Context.MODE_PRIVATE);
@@ -215,6 +202,9 @@ public class PathFragment extends Fragment {
                 PublicDate.paths.add(temp);
                 temp = (WheelPath) ois.readObject();
             }
+            ois.close();
+            fis.close();
+            Collections.reverse(PublicDate.paths);
         } catch (FileNotFoundException e) {
             e.printStackTrace();
         } catch (StreamCorruptedException e) {

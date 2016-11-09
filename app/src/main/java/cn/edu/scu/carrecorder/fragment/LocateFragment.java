@@ -68,6 +68,7 @@ public class LocateFragment extends Fragment implements LocationSource,
     private int locateCount = 0;
     private int stopCount = 0;
     private WheelPath path = new WheelPath(null, new ArrayList<CLatLonPoint>());
+    boolean DEBUG = false;
 
     public void setLineDrawingOn(boolean lineDrawingOn) {
         if (lineDrawingOn) {
@@ -76,6 +77,9 @@ public class LocateFragment extends Fragment implements LocationSource,
             path.setName("Path_" + sdf.format(date));
             stopCount = 0;
         } else {
+            if (path.size() <= 1) {
+                return;
+            }
             PublicDate.paths.add(path);
             saveWheelPath(PublicDate.paths);
             path.clear();
@@ -163,6 +167,13 @@ public class LocateFragment extends Fragment implements LocationSource,
                 }
 
                 float distance = AMapUtils.calculateLineDistance(oldLatLng, newLatLng);
+                if (DEBUG) {
+
+                    path.addLatLonPoint(new CLatLonPoint(
+                            amapLocation.getLatitude() + 0.001*path.size(), amapLocation.getLongitude() + 0.001*path.size()));
+
+                    return;
+                }
                 //位置没有变化
                 if(newLatLng.equals(oldLatLng)){
                     if (rateReduced) {
@@ -197,7 +208,7 @@ public class LocateFragment extends Fragment implements LocationSource,
                         drawLine(oldLatLng ,newLatLng );
                         if (pathRecOn) {
                             path.addLatLonPoint(new CLatLonPoint(
-                                    amapLocation.getLatitude(), amapLocation.getLongitude()));
+                                    amapLocation.getLatitude() + 0.001*path.size(), amapLocation.getLongitude() + 0.001*path.size()));
                         }
                     }
 

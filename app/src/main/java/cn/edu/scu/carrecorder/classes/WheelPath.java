@@ -35,4 +35,8 @@ public class WheelPath implements Serializable{
     public ArrayList<CLatLonPoint>  getPoint() {
         return points;
     }
+
+    public int size() {
+        return points.size();
+    }
 }

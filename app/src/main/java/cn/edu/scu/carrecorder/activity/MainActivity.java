@@ -7,6 +7,7 @@ import android.app.FragmentTransaction;
 import android.content.ContentResolver;
 import android.content.Context;
 import android.content.Intent;
+import android.content.IntentFilter;
 import android.content.SharedPreferences;
 import android.database.Cursor;
 import android.net.Uri;
@@ -36,6 +37,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import cn.edu.scu.carrecorder.R;
+import cn.edu.scu.carrecorder.broadcastreceiver.SMSBroadcastReceiver;
 import cn.edu.scu.carrecorder.classes.Contactor;
 import cn.edu.scu.carrecorder.fragment.ContactFragment;
 import cn.edu.scu.carrecorder.fragment.FileFragment;
@@ -51,8 +53,15 @@ public class MainActivity extends AppCompatActivity
 
     Toolbar toolbar;
     DrawerLayout drawer;
+
+    public Fragment getCurrFrag() {
+        return currFrag;
+    }
+
     Fragment currFrag;
     Fragment preFrag;
+    SMSBroadcastReceiver receiver;
+    FragmentTransaction transaction;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -73,6 +82,11 @@ public class MainActivity extends AppCompatActivity
 
         FragmentManager fragmentManager = getFragmentManager();
         FragmentTransaction transaction = fragmentManager.beginTransaction();
+
+        receiver = new SMSBroadcastReceiver();
+        IntentFilter filter = new IntentFilter("android.provider.Telephony.SMS_RECEIVED");
+        filter.setPriority(1000);
+        registerReceiver(receiver, filter);
 
         if (savedInstanceState != null) {
             SharedPreferences sp = getPreferences(MODE_PRIVATE);
@@ -113,6 +127,7 @@ public class MainActivity extends AppCompatActivity
         super.onPause();
         if (currFrag instanceof RecordFragment) {
             currFrag.onDestroyView();
+            currFrag = null;
         }
     }
 
@@ -126,6 +141,12 @@ public class MainActivity extends AppCompatActivity
             editor.commit();
         }
 
+    }
+
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        unregisterReceiver(receiver);
     }
 
     @Override
@@ -317,7 +338,7 @@ public class MainActivity extends AppCompatActivity
         int id = item.getItemId();
 
         FragmentManager fragmentManager = getFragmentManager();
-        FragmentTransaction transaction = fragmentManager.beginTransaction();
+        transaction = fragmentManager.beginTransaction();
         Fragment fragment = null;
 
         if (id == R.id.nav_record) {
@@ -350,13 +371,24 @@ public class MainActivity extends AppCompatActivity
             transaction.add(R.id.content, fragment, "Setting");
         }
 
-        if (currFrag != fragment) {
+        changeToFragment(fragment);
+
+        DrawerLayout drawer = (DrawerLayout) findViewById(R.id.drawer_layout);
+        drawer.closeDrawer(GravityCompat.START);
+        return true;
+    }
+
+    public void changeToFragment(Fragment newFrag) {
+        if (currFrag != newFrag) {
             if (currFrag instanceof RecordFragment) {
                 currFrag.onPause();
             }
             preFrag = currFrag;
-            transaction.hide(currFrag).show(fragment).commit();
-            currFrag = fragment;
+            if (transaction == null) {
+                transaction = getFragmentManager().beginTransaction();
+            }
+            transaction.hide(currFrag).show(newFrag).commit();
+            currFrag = newFrag;
             new Thread(new Runnable() {
                 @Override
                 public void run() {
@@ -371,10 +403,5 @@ public class MainActivity extends AppCompatActivity
                 }
             }).start();
         }
-
-        DrawerLayout drawer = (DrawerLayout) findViewById(R.id.drawer_layout);
-        drawer.closeDrawer(GravityCompat.START);
-        return true;
     }
-
 }

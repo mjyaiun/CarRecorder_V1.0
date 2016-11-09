@@ -1,9 +1,11 @@
 package cn.edu.scu.carrecorder.fragment;
 
+import android.content.Context;
 import android.os.Bundle;
 import android.app.Fragment;
 import android.support.v7.app.ActionBarDrawerToggle;
 import android.support.v7.widget.Toolbar;
+import android.telephony.TelephonyManager;
 import android.view.LayoutInflater;
 import android.view.Menu;
 import android.view.MenuInflater;
@@ -46,5 +48,13 @@ public class MonitorFragment extends Fragment {
                 getActivity(), PublicDate.drawer, toolbar, R.string.navigation_drawer_open, R.string.navigation_drawer_close);
         PublicDate.drawer.setDrawerListener(toggle);
         toggle.syncState();
+    }
+
+    public String getNativePhoneNumber() {
+        TelephonyManager telephonyManager = (TelephonyManager) getActivity()
+                .getSystemService(Context.TELEPHONY_SERVICE);
+        String NativePhoneNumber=null;
+        NativePhoneNumber=telephonyManager.getLine1Number();
+        return NativePhoneNumber;
     }
 }

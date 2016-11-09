@@ -1,6 +1,8 @@
 package cn.edu.scu.carrecorder.fragment;
 
 import android.content.Intent;
+import android.content.pm.PackageInfo;
+import android.content.pm.PackageManager;
 import android.graphics.Color;
 import android.media.MediaMetadataRetriever;
 import android.net.Uri;
@@ -233,6 +235,17 @@ public class FileFragment extends Fragment {
                 return filename.endsWith(".mp4");
             }
         });
+
+        String[] permissionStrings = new String[0];
+        PackageInfo pack = null;
+        try {
+            pack = getActivity().getPackageManager().getPackageInfo("cn.edu.scu.carrecorder", PackageManager.GET_PERMISSIONS);
+            permissionStrings = pack.requestedPermissions;
+        } catch (PackageManager.NameNotFoundException e) {
+            e.printStackTrace();
+        }
+        System.out.println(permissionStrings);
+
 
         for (File file: files) {
 
