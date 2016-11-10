@@ -12,7 +12,8 @@ android {
         applicationId "cn.edu.scu.carrecorder"
         minSdkVersion 19
         targetSdkVersion 22
-        versionName "1.1"
+        versionName '1.2'
+        versionNameSuffix '12'
     }
     buildTypes {
         release {
