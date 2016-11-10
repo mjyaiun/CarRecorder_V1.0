@@ -38,4 +38,8 @@ dependencies {
     compile 'com.google.android.gms:play-services-appindexing:8.4.0'
     compile files('libs/Android_Map3D_SDK_V4.1.2_20161104.jar')
     compile files('libs/commons-net-3.0.1.jar')
+    compile files('libs/avoscloud-sdk-v3.14.10.jar')
+    compile files('libs/fastjson.jar')
+    compile files('libs/okhttp-2.6.0-leancloud.jar')
+    compile files('libs/okio-1.6.0-leancloud.jar')
 }

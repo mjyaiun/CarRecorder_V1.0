@@ -25,6 +25,8 @@ import android.view.Menu;
 import android.view.MenuItem;
 import android.view.ViewGroup;
 
+import com.avos.avoscloud.AVOSCloud;
+
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
@@ -62,11 +64,13 @@ public class MainActivity extends AppCompatActivity
     Fragment preFrag;
     SMSBroadcastReceiver receiver;
     FragmentTransaction transaction;
+    NavigationView navigationView;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+        AVOSCloud.initialize(this, "5kA0NMpLnNNA4C8gTHVIzo6S-gzGzoHsz", "VqJscjQvTweuuJllTLKCCfms");
         toolbar = (Toolbar) findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
         drawer = (DrawerLayout) findViewById(R.id.drawer_layout);
@@ -76,7 +80,7 @@ public class MainActivity extends AppCompatActivity
         drawer.setDrawerListener(toggle);
         toggle.syncState();
 
-        NavigationView navigationView = (NavigationView) findViewById(R.id.nav_view);
+        navigationView = (NavigationView) findViewById(R.id.nav_view);
         navigationView.setNavigationItemSelectedListener(this);
         navigationView.setCheckedItem(R.id.nav_record);
 
@@ -354,8 +358,7 @@ public class MainActivity extends AppCompatActivity
             fragment = PathFragment.getFragment();
             transaction.add(R.id.content, fragment, "Path");
 
-        }
-        else if (id == R.id.nav_friends) {
+        } else if (id == R.id.nav_friends) {
 
             fragment = ContactFragment.getFragment();
             transaction.add(R.id.content, fragment, "Contact");
@@ -370,38 +373,41 @@ public class MainActivity extends AppCompatActivity
             fragment = SettingFragment.getFragment();
             transaction.add(R.id.content, fragment, "Setting");
         }
-
-        changeToFragment(fragment);
+        if (currFrag != fragment) {
+            transaction.commit();
+            changeToFragment(fragment, false);
+        }
 
         DrawerLayout drawer = (DrawerLayout) findViewById(R.id.drawer_layout);
         drawer.closeDrawer(GravityCompat.START);
         return true;
     }
 
-    public void changeToFragment(Fragment newFrag) {
-        if (currFrag != newFrag) {
-            if (currFrag instanceof RecordFragment) {
-                currFrag.onPause();
-            }
-            preFrag = currFrag;
-            if (transaction == null) {
-                transaction = getFragmentManager().beginTransaction();
-            }
-            transaction.hide(currFrag).show(newFrag).commit();
-            currFrag = newFrag;
-            new Thread(new Runnable() {
-                @Override
-                public void run() {
-                    try {
-                        Thread.sleep(1000);
-                        FragmentManager fragmentManager = getFragmentManager();
-                        FragmentTransaction transaction = fragmentManager.beginTransaction();
-                        transaction.remove(preFrag).commit();
-                    } catch (InterruptedException e) {
-                        e.printStackTrace();
-                    }
-                }
-            }).start();
+    public void changeToFragment(Fragment newFrag, boolean isMonitor) {
+        transaction = getFragmentManager().beginTransaction();
+        if (isMonitor) {
+            transaction.add(R.id.content, newFrag, "Record");
+            navigationView.setCheckedItem(R.id.nav_record);
         }
+        if (currFrag instanceof RecordFragment) {
+            currFrag.onPause();
+        }
+        preFrag = currFrag;
+
+        transaction.hide(currFrag).show(newFrag).commit();
+        currFrag = newFrag;
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                try {
+                    Thread.sleep(1000);
+                    FragmentManager fragmentManager = getFragmentManager();
+                    FragmentTransaction transaction = fragmentManager.beginTransaction();
+                    transaction.remove(preFrag).commit();
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+            }
+        }).start();
     }
 }

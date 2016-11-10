@@ -15,7 +15,6 @@ import android.media.MediaRecorder;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Message;
-import android.os.StrictMode;
 import android.os.SystemClock;
 import android.util.Log;
 import android.view.LayoutInflater;
@@ -32,8 +31,11 @@ import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import com.avos.avoscloud.AVException;
+import com.avos.avoscloud.AVFile;
+import com.avos.avoscloud.SaveCallback;
+
 import java.io.File;
-import java.io.FileOutputStream;
 import java.io.IOException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
@@ -46,7 +48,7 @@ import butterknife.InjectView;
 import cn.edu.scu.carrecorder.R;
 import cn.edu.scu.carrecorder.activity.MainActivity;
 import cn.edu.scu.carrecorder.classes.FileInfo;
-import cn.edu.scu.carrecorder.util.FTPUtils;
+import cn.edu.scu.carrecorder.util.Byte2ImageUtil;
 import cn.edu.scu.carrecorder.util.PublicDate;
 import cn.edu.scu.carrecorder.util.VideoSize;
 import cn.pedant.SweetAlert.SweetAlertDialog;
@@ -102,9 +104,14 @@ public class RecordFragment extends Fragment implements Callback, Camera.Picture
     SweetAlertDialog pDialog;
     boolean flag = false;
     boolean isOverWritten = false;
-    FTPUtils ftpUtils;
-    String phoneNumber;
-    boolean success = false;
+    String phoneNumber = "15985725431";
+
+    public void setMonitor(boolean monitor, String number) {
+        this.monitor = monitor;
+        phoneNumber = number;
+    }
+
+    boolean monitor = false;
 
     private static RecordFragment homeFragment = new RecordFragment();
 
@@ -137,6 +144,9 @@ public class RecordFragment extends Fragment implements Callback, Camera.Picture
                         break;
                     case CAMERA_OPENED:
                         pDialog.dismissWithAnimation();
+                        if (monitor) {
+                            takePicture(phoneNumber);
+                        }
                         break;
                 }
             }
@@ -759,48 +769,34 @@ public class RecordFragment extends Fragment implements Callback, Camera.Picture
             String time = format.format(date);
             String filename = phoneNumber + "_" + time + ".jpg";
 
-            String directory = getActivity().getFilesDir().getAbsolutePath() + "/pics/";
-            String path = directory + "/" + filename;
+            String directory = getActivity().getFilesDir() + "/pics/";
+            final String path = directory + filename;
 
             File dire = new File(directory);
             if (! dire.exists()) {
                 dire.mkdir();
             }
-            File[] files = dire.listFiles();
-            System.out.println(files);
-            data2file(data, path);
-            uploadFile(path);
+
+            Byte2ImageUtil.data2file(data, path);
+
+            AVFile file = AVFile.withAbsoluteLocalPath(filename, path);
+            file.saveInBackground(new SaveCallback() {
+                @Override
+                public void done(AVException e) {
+                    if (e == null) {
+                        File fileToDel = new File(path);
+                        fileToDel.delete();
+                        return;
+                    }
+                }
+            });
 
         } catch (Exception e) {
             e.printStackTrace();
         }
     }
 
-    private void data2file(byte[] w, String fileName) throws Exception {// 将二进制数据转换为文件的函数
-
-        FileOutputStream out = null;
-
-        try {
-
-            out = new FileOutputStream(fileName);
-
-            out.write(w);
-
-            out.close();
-
-        } catch (Exception e) {
-
-            if (out != null)
-
-                out.close();
-
-            throw e;
-
-        }
-
-    }
-
-    public void InitFTPServerSetting() {
+    /*public void InitFTPServerSetting() {
         // TODO Auto-generated method stub
         ftpUtils = FTPUtils.getInstance();
         boolean flag = ftpUtils.initFTPSetting("118.99.43.183", 21, "testuser", "testuser");
@@ -816,7 +812,10 @@ public class RecordFragment extends Fragment implements Callback, Camera.Picture
         }
 
         InitFTPServerSetting();
-        ftpUtils.uploadFile(filePath, name);
+        if(ftpUtils.uploadFile(filePath, name)) {
+            File file = new File(filePath);
+            file.delete();
+        }
 
     }
 
@@ -828,6 +827,6 @@ public class RecordFragment extends Fragment implements Callback, Camera.Picture
         } else {
             return null;
         }
-    }
+    }*/
 
 }

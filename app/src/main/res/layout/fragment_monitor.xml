@@ -3,6 +3,7 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
+    xmlns:wheel="http://schemas.android.com/apk/res-auto"
     tools:context=".fragment.MonitorFragment">
 
     <android.support.design.widget.AppBarLayout
@@ -31,10 +32,146 @@
         </android.support.v7.widget.Toolbar>
 
     </android.support.design.widget.AppBarLayout>
-    <TextView
+
+    <LinearLayout
+        android:layout_below="@+id/view"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:text="This is MonitorFragment"
-        android:layout_below="@+id/view" />
+        android:orientation="horizontal">
+
+        <RelativeLayout
+            android:layout_weight="3"
+            android:layout_width="wrap_content"
+            android:layout_height="match_parent"
+            android:padding="5dp"
+            android:background="@drawable/sharp"
+            android:orientation="vertical">
+
+            <Button
+                android:id="@+id/clear"
+                android:layout_width="60dp"
+                android:layout_height="40dp"
+                android:background="@color/colorPrimary"
+                android:text="清除"
+                android:textColor="@color/white"
+                android:layout_below="@+id/phoneNumber"
+                android:layout_marginRight="5dp"
+                android:layout_marginTop="10dp"
+                android:layout_toLeftOf="@+id/center"
+                />
+
+            <Button
+                android:id="@+id/confirm"
+                android:layout_width="60dp"
+                android:layout_height="40dp"
+                android:background="@color/colorPrimary"
+                android:text="确定"
+                android:textColor="@color/white"
+                android:layout_alignBottom="@+id/clear"
+                android:layout_marginLeft="5dp"
+                android:layout_toRightOf="@+id/center"
+                />
+
+            <TextView
+                android:text="TextView"
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_alignParentTop="true"
+                android:layout_centerHorizontal="true"
+                android:id="@+id/center"
+                />
+
+            <TextView
+                android:text="@string/monitor_tips"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:id="@+id/textView5"
+                android:layout_alignParentTop="true"
+                android:layout_alignStart="@+id/clear"
+                android:layout_marginTop="15dp" />
+
+            <EditText
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:background="@drawable/sharp"
+                android:inputType="phone"
+                android:id="@+id/nativePhoneNumber"
+                android:layout_below="@+id/textView4"
+                android:layout_marginTop="2dp"
+                android:layout_alignParentStart="true" />
+
+            <TextView
+                android:id="@+id/textView4"
+                android:text="输入本机电话号码："
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_below="@+id/textView5"
+                android:layout_marginTop="15dp"
+                android:layout_alignParentStart="true" />
+
+            <EditText
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:background="@drawable/sharp"
+                android:inputType="phone"
+                android:id="@+id/phoneNumber"
+                android:layout_marginTop="2dp"
+                android:layout_below="@+id/textView2"
+                android:layout_alignParentStart="true" />
+
+            <TextView
+                android:text="输入对方电话号码："
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_below="@id/nativePhoneNumber"
+                android:layout_marginTop="2dp"
+                android:id="@+id/textView2"
+                android:layout_alignParentStart="true" />
+        </RelativeLayout>
+
+        <RelativeLayout
+            android:layout_width="wrap_content"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:padding="5dp"
+            >
+
+            <com.pnikosis.materialishprogress.ProgressWheel
+                android:id="@+id/progressWheel"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                wheel:progressIndeterminate="true"
+                android:visibility="gone"
+                android:layout_gravity="center" />
+
+            <TextView
+                android:id="@+id/progress"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_centerInParent="true"
+                android:text="0%"
+                android:visibility="gone"/>
+
+            <ImageView
+                android:id="@+id/picture"
+                android:layout_height="match_parent"
+                android:src="@drawable/videofile"
+                android:visibility="gone"
+                android:layout_width="match_parent" />
+
+            <TextView
+                android:id="@+id/tips_monitor"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:gravity="center"
+                android:textSize="22sp"
+                android:text="暂无图像"/>
+
+        </RelativeLayout>
+
+
+    </LinearLayout>
+
+
 
 </RelativeLayout>

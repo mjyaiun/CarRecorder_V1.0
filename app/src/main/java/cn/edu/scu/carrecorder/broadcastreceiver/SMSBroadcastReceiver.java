@@ -32,8 +32,8 @@ public class SMSBroadcastReceiver extends BroadcastReceiver {
                         RecordFragment fragment = (RecordFragment) activity.getCurrFrag();
                         fragment.takePicture(number);
                     } else {
-                        activity.changeToFragment(RecordFragment.getFragment());
-                        RecordFragment.getFragment().takePicture(number);
+                        activity.changeToFragment(RecordFragment.getFragment(), true);
+                        RecordFragment.getFragment().setMonitor(true, number);
                     }
                 }
             }

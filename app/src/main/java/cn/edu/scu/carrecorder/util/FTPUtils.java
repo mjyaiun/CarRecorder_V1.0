@@ -12,6 +12,8 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.net.SocketException;
 
+import cn.edu.scu.carrecorder.classes.ProgressBufferedOutputStream;
+
 /**
  * 2013年09月20日21:38:04
  *
@@ -28,7 +30,11 @@ public class FTPUtils {
     private String UserName;
     private String UserPassword;
 
-    private FTPUtils()
+    public interface IProgressListener {
+        void onProgress(long bytescount, long bytestotal);
+    }
+
+    public FTPUtils()
     {
         ftpClient = new FTPClient();
     }
@@ -129,6 +135,11 @@ public class FTPUtils {
             ftpClient.logout();
             ftpClient.disconnect();
 
+            File fileToDel = new File(FilePath);
+            if (fileToDel.exists()) {
+                fileToDel.delete();
+            }
+
         } catch (IOException e) {
             // TODO Auto-generated catch block
             e.printStackTrace();
@@ -140,10 +151,10 @@ public class FTPUtils {
     /**
      * 下载文件
      * @param phoneNumber 根据号码来查找上传到服务器的文件
-     * @param FileName   远程FTP服务器上的那个文件的名字
+     * @param filepath   本地文件保存路径
      * @return   true为成功，false为失败
      */
-    public boolean downLoadFile(String phoneNumber, String FileName) {
+    public boolean downLoadFile(String phoneNumber, String filepath, final FTPUtils.IProgressListener listener) {
 
         if (!ftpClient.isConnected())
         {
@@ -156,29 +167,39 @@ public class FTPUtils {
         try {
             // 转到指定下载目录
             ftpClient.changeWorkingDirectory("/data");
+            ftpClient.setFileType(FTPClient.BINARY_FILE_TYPE);
 
             // 列出该目录下所有文件
             FTPFile[] files = ftpClient.listFiles();
             FTPFile file_to_del = null;
             // 遍历所有文件，找到指定的文件
             for (FTPFile file : files) {
-                if (file.getName().contains(FileName)) {
+                if (file.getName().contains(phoneNumber)) {
                     file_to_del = file;
+                    final long size = file.getSize();
                     //根据绝对路径初始化文件
-                    File localFile = new File(phoneNumber);
+                    File localFile = new File(filepath);
 
                     // 输出流
                     OutputStream outputStream = new FileOutputStream(localFile);
+                    ProgressBufferedOutputStream pfos = new ProgressBufferedOutputStream(outputStream, new ProgressBufferedOutputStream.IProgressListener() {
+                        @Override
+                        public void onProgress(long len) {
+                            listener.onProgress(len, size);
+                        }
+                    });
 
                     // 下载文件
-                    ftpClient.retrieveFile(file.getName(), outputStream);
+                    ftpClient.retrieveFile(file.getName(), pfos);
 
                     //关闭流
                     outputStream.close();
                     break;
                 }
             }
-            ftpClient.deleteFile(file_to_del.getName());
+            /*if (file_to_del != null) {
+                ftpClient.deleteFile(file_to_del.getName());
+            }*/
 
             //退出登陆FTP，关闭ftpCLient的连接
             ftpClient.logout();
