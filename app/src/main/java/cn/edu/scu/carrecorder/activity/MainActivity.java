@@ -24,6 +24,7 @@ import android.support.v7.widget.Toolbar;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.ViewGroup;
+import android.view.WindowManager;
 
 import com.avos.avoscloud.AVOSCloud;
 
@@ -43,11 +44,13 @@ import cn.edu.scu.carrecorder.broadcastreceiver.SMSBroadcastReceiver;
 import cn.edu.scu.carrecorder.classes.Contactor;
 import cn.edu.scu.carrecorder.fragment.ContactFragment;
 import cn.edu.scu.carrecorder.fragment.FileFragment;
+import cn.edu.scu.carrecorder.fragment.LocateFragment;
 import cn.edu.scu.carrecorder.fragment.MonitorFragment;
 import cn.edu.scu.carrecorder.fragment.PathFragment;
 import cn.edu.scu.carrecorder.fragment.RecordFragment;
 import cn.edu.scu.carrecorder.fragment.SettingFragment;
 import cn.edu.scu.carrecorder.util.PublicDate;
+import cn.edu.scu.carrecorder.util.VideoSize;
 import cn.pedant.SweetAlert.SweetAlertDialog;
 
 public class MainActivity extends AppCompatActivity
@@ -73,6 +76,10 @@ public class MainActivity extends AppCompatActivity
         AVOSCloud.initialize(this, "5kA0NMpLnNNA4C8gTHVIzo6S-gzGzoHsz", "VqJscjQvTweuuJllTLKCCfms");
         toolbar = (Toolbar) findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
+        int width = getWindowManager().getDefaultDisplay().getWidth();
+        int height = getWindowManager().getDefaultDisplay().getHeight();
+        VideoSize.getOptimalSize(width,height);
+
         drawer = (DrawerLayout) findViewById(R.id.drawer_layout);
         PublicDate.drawer = drawer;
         ActionBarDrawerToggle toggle = new ActionBarDrawerToggle(
@@ -130,8 +137,20 @@ public class MainActivity extends AppCompatActivity
     protected void onPause() {
         super.onPause();
         if (currFrag instanceof RecordFragment) {
-            currFrag.onDestroyView();
+            ((RecordFragment)currFrag).onDestroyView();
             currFrag = null;
+        }
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        if (currFrag == null) {
+            FragmentManager fragmentManager = getFragmentManager();
+            FragmentTransaction transaction = fragmentManager.beginTransaction();
+            transaction.add(R.id.content, RecordFragment.getFragment(), "Record");
+            transaction.commit();
+            currFrag = RecordFragment.getFragment();
         }
     }
 

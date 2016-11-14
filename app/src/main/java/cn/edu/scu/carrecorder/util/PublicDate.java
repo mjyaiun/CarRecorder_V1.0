@@ -25,6 +25,5 @@ public class PublicDate {
     public static List<Contactor> contactors = new ArrayList<>();
     public static List<WheelPath> paths = new ArrayList<>();
     public static List<FileInfo> files = new ArrayList<>();
-    public static LocateFragment locateFragment;
 
 }

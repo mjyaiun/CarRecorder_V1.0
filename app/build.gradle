@@ -10,10 +10,11 @@ android {
     }
     defaultConfig {
         applicationId "cn.edu.scu.carrecorder"
-        minSdkVersion 19
-        targetSdkVersion 22
-        versionName '1.2'
-        versionNameSuffix '12'
+        minSdkVersion 14
+        targetSdkVersion 21
+        versionName '1.1'
+        versionNameSuffix '.10'
+        versionCode 1
     }
     buildTypes {
         release {

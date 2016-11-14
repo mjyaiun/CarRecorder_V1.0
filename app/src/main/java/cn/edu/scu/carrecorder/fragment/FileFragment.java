@@ -135,8 +135,11 @@ public class FileFragment extends Fragment {
     }
 
     public void deleteAllVideo() {
-        String videoFilePath = getActivity().getFilesDir().getAbsolutePath();
+        String videoFilePath = getActivity().getFilesDir().getAbsolutePath() + "/videofiles/";
         File dir = new File(videoFilePath);
+        if (! dir.exists()) {
+            dir.mkdir();
+        }
         File[] files = dir.listFiles();
         for (File file : files) {
             if (file.isFile()) {
@@ -228,23 +231,16 @@ public class FileFragment extends Fragment {
         if (getActivity() == null) {
             return;
         }
-        File dir = getActivity().getFilesDir();
+        File dir = new File(getActivity().getFilesDir().getAbsolutePath() + "/videofiles/");
+        if (! dir.exists()) {
+            dir.mkdir();
+        }
         File[] files = dir.listFiles(new FilenameFilter() {
             @Override
             public boolean accept(File dir, String filename) {
                 return filename.endsWith(".mp4");
             }
         });
-
-        String[] permissionStrings = new String[0];
-        PackageInfo pack = null;
-        try {
-            pack = getActivity().getPackageManager().getPackageInfo("cn.edu.scu.carrecorder", PackageManager.GET_PERMISSIONS);
-            permissionStrings = pack.requestedPermissions;
-        } catch (PackageManager.NameNotFoundException e) {
-            e.printStackTrace();
-        }
-        System.out.println(permissionStrings);
 
 
         for (File file: files) {

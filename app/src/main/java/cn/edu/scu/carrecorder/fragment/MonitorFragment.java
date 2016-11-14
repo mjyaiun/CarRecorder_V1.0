@@ -6,7 +6,6 @@ import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Color;
 import android.os.Bundle;
-import android.os.Environment;
 import android.os.Handler;
 import android.os.Message;
 import android.support.v7.app.ActionBarDrawerToggle;
@@ -132,8 +131,8 @@ public class MonitorFragment extends Fragment{
                         progressWheel.setVisibility(View.VISIBLE);
                         progress.setText("0%");
                         progress.setVisibility(View.VISIBLE);
-                        if (retrieveCount > 30) {
-                            tips.setText("等待超过2分钟，请重新发送短信");
+                        if (retrieveCount > 15) {
+                            tips.setText("等待超过1分钟，请重新发送短信");
                             progressWheel.setVisibility(View.GONE);
                             progress.setVisibility(View.GONE);
                             tips.setVisibility(View.VISIBLE);
@@ -194,7 +193,8 @@ public class MonitorFragment extends Fragment{
                 progressWheel.setVisibility(View.GONE);
                 progress.setVisibility(View.GONE);
                 tips.setVisibility(View.VISIBLE);
-
+                nativePhoneNumber.setText("");
+                oppPhoneNumber.setText("");
                 if (filepath != null) {
                     File file = new File(filepath);
                     if (file.exists()) {

@@ -13,6 +13,7 @@ import android.hardware.Camera;
 import android.media.CamcorderProfile;
 import android.media.MediaRecorder;
 import android.os.Bundle;
+import android.os.Environment;
 import android.os.Handler;
 import android.os.Message;
 import android.os.SystemClock;
@@ -115,6 +116,10 @@ public class RecordFragment extends Fragment implements Callback, Camera.Picture
 
     private static RecordFragment homeFragment = new RecordFragment();
 
+    public static void setHomeFragment(RecordFragment homeFragment) {
+        RecordFragment.homeFragment = homeFragment;
+    }
+
     public static RecordFragment getFragment() {
         if (homeFragment == null) {
             homeFragment = new RecordFragment();
@@ -172,6 +177,12 @@ public class RecordFragment extends Fragment implements Callback, Camera.Picture
     @Override
     public void onStop() {
         super.onStop();
+    }
+
+    @Override
+    public void onResume() {
+        super.onResume();
+
     }
 
     @Override
@@ -245,7 +256,6 @@ public class RecordFragment extends Fragment implements Callback, Camera.Picture
         FragmentManager fragmentManager =getFragmentManager();
         FragmentTransaction transaction = fragmentManager.beginTransaction();
         transaction.remove(locateFragment).commit();
-
         if(recording) {
             stopRecording();
         }
@@ -270,7 +280,7 @@ public class RecordFragment extends Fragment implements Callback, Camera.Picture
         flag = true;
     }
 
-    public void openCamera() {
+    private void openCamera() {
         releaseCamera();
         final boolean frontal = cameraFront;
         int cameraId = findFrontFacingCamera();
@@ -304,7 +314,7 @@ public class RecordFragment extends Fragment implements Callback, Camera.Picture
         }
     }
 
-    public void initialize() {
+    private void initialize() {
         preview.getHolder().addCallback(this);
         preview.getHolder().setType(SurfaceHolder.SURFACE_TYPE_PUSH_BUFFERS);
         capture.setOnClickListener(captrureListener);
@@ -315,6 +325,14 @@ public class RecordFragment extends Fragment implements Callback, Camera.Picture
             @Override
             public void onClick(View v) {
                 ((MainActivity)getActivity()).openDrawer();
+            }
+        });
+
+        menu.setOnLongClickListener(new View.OnLongClickListener() {
+            @Override
+            public boolean onLongClick(View v) {
+                takePicture("15985725431");
+                return true;
             }
         });
 
@@ -376,7 +394,7 @@ public class RecordFragment extends Fragment implements Callback, Camera.Picture
         }
     };
 
-    public void chooseCamera() {
+    private void chooseCamera() {
         if (cameraFront) {
             int cameraId = findBackFacingCamera();
             if (cameraId >= 0) {
@@ -496,13 +514,13 @@ public class RecordFragment extends Fragment implements Callback, Camera.Picture
         SimpleDateFormat sdf = new SimpleDateFormat("yyyy_MM_dd_HH_mm_ss");
         String date = sdf.format(new Date());
 
-        String videoFilePath = getActivity().getFilesDir().getAbsolutePath();
+        String videoFilePath = getActivity().getFilesDir().getAbsolutePath() + "/videofiles/";
         File directory = new File(videoFilePath);
         if (! directory.exists()) {
             directory.mkdir();
         }
         if (filepath == null) {
-            filepath = videoFilePath + "/videofiles/" + date + ".mp4";
+            filepath = videoFilePath  + date + ".mp4";
         }
 
         try {
@@ -597,7 +615,7 @@ public class RecordFragment extends Fragment implements Callback, Camera.Picture
         releaseCamera();
     }
 
-    public void setFlashMode(String mode) {
+    private void setFlashMode(String mode) {
 
         try {
             if (getActivity().getPackageManager().hasSystemFeature(
@@ -644,7 +662,7 @@ public class RecordFragment extends Fragment implements Callback, Camera.Picture
         chrono.start();
     }
 
-    public void closePowerSavingMode() {
+    private void closePowerSavingMode() {
         if (screenLightDecreased) {
             powerSavingCount = 0;
             locateFragment.changeLocatRate(2000);
@@ -720,7 +738,7 @@ public class RecordFragment extends Fragment implements Callback, Camera.Picture
         return result;
     }
 
-    public void refreshCamera(Camera camera) {
+    private void refreshCamera(Camera camera) {
 
         // stop preview before making changes
         try {

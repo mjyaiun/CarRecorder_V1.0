@@ -171,7 +171,8 @@ public class LocateFragment extends Fragment implements LocationSource,
 
                     path.addLatLonPoint(new CLatLonPoint(
                             amapLocation.getLatitude() + 0.001*path.size(), amapLocation.getLongitude() + 0.001*path.size()));
-
+                    float speed = amapLocation.getSpeed();
+                    getPosSpeInfo(amapLocation, speed);
                     return;
                 }
                 //位置没有变化
